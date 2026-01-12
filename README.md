@@ -49,5 +49,33 @@ npm run dev
 - Cyberpunk-themed UI with neon aesthetics
 - Move history and game status tracking
 - Player information display
-- Responsive design
+- Chess timers with customizable time controls
+- Draw offers, resignation, and timeout detection
+- Color selection (play as White, Black, or Random)
+- Quick Join links for easy game sharing
+- Responsive design for mobile and desktop
+
+## Troubleshooting
+
+### Draw Offer Not Working?
+If clicking "Offer Draw" doesn't work, you need to apply a database migration.
+
+**Quick Fix:** See [QUICK_FIX_DRAW_OFFER.md](./QUICK_FIX_DRAW_OFFER.md) (2 minutes)
+
+**Detailed Guide:** See [DEBUG_DRAW_OFFER.md](./DEBUG_DRAW_OFFER.md)
+
+**Diagnostic Tool:** Open `/draw-diagnostic.html` in your browser
+
+### Other Issues
+- **Blank Screen:** See [BLANK_SCREEN_FIX.md](./BLANK_SCREEN_FIX.md)
+- **Real-time Issues:** See [REALTIME_FIXES.md](./REALTIME_FIXES.md)
+- **General Status:** See [PROJECT_STATUS.md](./PROJECT_STATUS.md)
+
+## Documentation
+
+- [IMPROVEMENTS.md](./IMPROVEMENTS.md) - Feature improvements and enhancements
+- [WINNER_DISPLAY_AND_DRAW_SYSTEM.md](./WINNER_DISPLAY_AND_DRAW_SYSTEM.md) - Game ending logic
+- [QUICK_JOIN_FEATURE.md](./QUICK_JOIN_FEATURE.md) - Quick join implementation
+- [FIX_DRAW_OFFER.md](./FIX_DRAW_OFFER.md) - Draw offer system details
+
 # cyber-chess-arena

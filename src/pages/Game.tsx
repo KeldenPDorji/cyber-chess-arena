@@ -16,10 +16,16 @@ import { Button } from "@/components/ui/button";
 
 const Game = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [playerName, setPlayerName] = useState(() => 
-    localStorage.getItem("chess_player_name") || ""
-  );
   const gameCodeFromUrl = searchParams.get("game");
+  
+  // Only load saved name if NOT coming from a game link
+  const [playerName, setPlayerName] = useState(() => {
+    // If there's a game code in URL, don't auto-load the name (show QuickJoin)
+    if (gameCodeFromUrl) {
+      return "";
+    }
+    return localStorage.getItem("chess_player_name") || "";
+  });
 
   // Debug logging
   console.log("🔍 Game.tsx render:", {
@@ -60,20 +66,12 @@ const Game = () => {
     timeoutWinner,
   } = useMultiplayerGame(gameCodeFromUrl, playerName);
 
-  // Save player name
+  // Save player name (only after joining a game, not on QuickJoin page)
   useEffect(() => {
-    if (playerName) {
+    if (playerName && playerColor) {
       localStorage.setItem("chess_player_name", playerName);
     }
-  }, [playerName]);
-
-  // Auto-join if game code in URL
-  useEffect(() => {
-    if (gameCodeFromUrl && playerName && !playerColor) {
-      console.log("Auto-joining game from URL:", gameCodeFromUrl);
-      joinGame(gameCodeFromUrl);
-    }
-  }, [gameCodeFromUrl, playerName, playerColor, joinGame]);
+  }, [playerName, playerColor]);
 
   // Calculate derived values that need to be available for hooks
   const isMyTurn = playerColor === turn;
@@ -85,6 +83,14 @@ const Game = () => {
   const drawOfferedByMe = 
     gameState?.draw_offered_by && 
     gameState?.draw_offered_by === playerColor;
+
+  // Debug draw offer state
+  console.log("🎯 Draw offer debug:", {
+    draw_offered_by: gameState?.draw_offered_by,
+    playerColor,
+    drawOfferedByOpponent,
+    drawOfferedByMe
+  });
 
   // Track previous draw offer state to detect decline
   const prevDrawOfferedByMe = useRef(drawOfferedByMe);
@@ -158,13 +164,25 @@ const Game = () => {
     return code;
   };
 
-  const handleOfferDraw = () => {
+  const handleOfferDraw = async () => {
     console.log("Offering draw, current state:", { 
       gameState: gameState?.draw_offered_by, 
       playerColor 
     });
-    offerDraw();
-    toast.success("Draw offer sent to opponent");
+    const result = await offerDraw();
+    
+    if (result?.error) {
+      if (result.migrationNeeded) {
+        toast.error(
+          "Database migration required! Check console and see DEBUG_DRAW_OFFER.md for instructions.",
+          { duration: 8000 }
+        );
+      } else {
+        toast.error("Failed to offer draw: " + result.error, { duration: 5000 });
+      }
+    } else if (result?.success) {
+      toast.success("Draw offer sent to opponent");
+    }
   };
 
   const handleAcceptDraw = () => {
@@ -206,10 +224,15 @@ const Game = () => {
     return (
       <QuickJoin
         gameCode={gameCodeFromUrl}
-        onJoin={(name) => {
-          console.log("QuickJoin: User entered name:", name);
+        onJoin={async (name) => {
+          console.log("QuickJoin: User clicked join with name:", name);
           setPlayerName(name);
-          // After setting name, the useEffect will auto-join
+          // Join the game with the provided name
+          const success = await joinGame(gameCodeFromUrl, name);
+          console.log("Join result:", success);
+          if (!success) {
+            toast.error("Failed to join game");
+          }
         }}
         loading={loading}
       />
@@ -225,9 +248,87 @@ const Game = () => {
   });
 
   // Show lobby if no active game
-  // Only show lobby if: no gameState exists, OR (game is waiting AND user hasn't joined as a player)
-  if (!gameState || (gameState.status === "waiting" && !playerColor)) {
-    console.log("Showing lobby");
+  // Show lobby if: no gameState exists, OR (game is waiting AND user hasn't joined as a player)
+  // BUT if game is waiting and user IS a player (creator), show waiting screen, not lobby
+  if (!gameState) {
+    console.log("Showing lobby - no game state");
+    return (
+      <GameLobby
+        onCreateGame={handleCreateGame}
+        onJoinGame={joinGame}
+        onSetPlayerName={setPlayerName}
+        onSetTimeControl={(minutes, increment) => setTimeControl({ minutes, increment })}
+        playerName={playerName}
+      />
+    );
+  }
+  
+  // If game is waiting and I'm a player (creator), show waiting screen
+  if (gameState.status === "waiting" && playerColor) {
+    console.log("Showing waiting screen - you created game, waiting for opponent", {
+      status: gameState.status,
+      white: gameState.white_player_name,
+      black: gameState.black_player_name
+    });
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="cyber-card rounded-lg p-8 max-w-md text-center space-y-6"
+        >
+          <div className="flex items-center justify-center gap-3">
+            <Users className="w-8 h-8 text-neon-cyan animate-pulse" />
+            <h2 className="font-cyber text-2xl text-neon-cyan">Waiting for Opponent</h2>
+          </div>
+          
+          <div className="space-y-4">
+            <p className="text-muted-foreground">
+              Share this game code with your friend:
+            </p>
+            <div className="cyber-card bg-card p-4 rounded">
+              <p className="font-mono text-3xl font-bold text-neon-cyan">{gameState.game_code}</p>
+            </div>
+            <p className="text-sm text-muted-foreground">Or share this link:</p>
+            <div className="cyber-card bg-card p-3 rounded">
+              <p className="font-mono text-sm text-neon-purple break-all">
+                {window.location.href}
+              </p>
+            </div>
+            <Button
+              onClick={() => {
+                navigator.clipboard.writeText(window.location.href);
+                toast.success("Link copied to clipboard!");
+              }}
+              className="w-full cyber-button"
+            >
+              Copy Link
+            </Button>
+          </div>
+          
+          <div className="pt-4 border-t border-border">
+            <p className="text-sm text-muted-foreground">
+              You are playing as <span className="text-neon-cyan font-cyber">
+                {playerColor === "w" ? "White" : "Black"}
+              </span>
+            </p>
+          </div>
+          
+          <Button
+            onClick={handleNewGame}
+            variant="outline"
+            className="w-full"
+          >
+            Cancel & New Game
+          </Button>
+        </motion.div>
+      </div>
+    );
+  }
+  
+  // If game is waiting and I'm NOT a player, show lobby to join
+  if (gameState.status === "waiting" && !playerColor) {
+    console.log("Showing lobby - game waiting, not a player");
     return (
       <GameLobby
         onCreateGame={handleCreateGame}

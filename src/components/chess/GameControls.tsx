@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { RotateCcw, Flag, Handshake, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +33,28 @@ export const GameControls = ({
   gameOver,
   drawOffered = false,
 }: GameControlsProps) => {
+  // State to control the draw offer dialog
+  const [showDrawDialog, setShowDrawDialog] = useState(false);
+
+  // Auto-open dialog when draw is offered
+  useEffect(() => {
+    if (drawOffered && onAcceptDraw) {
+      console.log("🎮 Auto-opening draw dialog");
+      setShowDrawDialog(true);
+    } else {
+      setShowDrawDialog(false);
+    }
+  }, [drawOffered, onAcceptDraw]);
+
+  // Debug logging
+  console.log("🎮 GameControls render:", {
+    drawOffered,
+    hasAcceptHandler: !!onAcceptDraw,
+    hasDeclineHandler: !!onDeclineDraw,
+    shouldShowAccept: drawOffered && !!onAcceptDraw,
+    showDrawDialog
+  });
+  
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -90,7 +113,7 @@ export const GameControls = ({
         {!gameOver && (
           <>
             {drawOffered && onAcceptDraw ? (
-              <AlertDialog>
+              <AlertDialog open={showDrawDialog} onOpenChange={setShowDrawDialog}>
                 <AlertDialogTrigger asChild>
                   <Button
                     variant="outline"
@@ -111,13 +134,19 @@ export const GameControls = ({
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel 
-                      onClick={onDeclineDraw}
+                      onClick={() => {
+                        onDeclineDraw?.();
+                        setShowDrawDialog(false);
+                      }}
                       className="border-destructive/30 hover:bg-destructive/10"
                     >
                       Decline
                     </AlertDialogCancel>
                     <AlertDialogAction
-                      onClick={onAcceptDraw}
+                      onClick={() => {
+                        onAcceptDraw();
+                        setShowDrawDialog(false);
+                      }}
                       className="bg-neon-yellow text-background hover:bg-neon-yellow/80"
                     >
                       Accept Draw

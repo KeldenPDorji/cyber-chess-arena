@@ -2,15 +2,27 @@
 
 ## ✅ Fixed Issues
 
-### 1. Copy Link Button (Fixed)
-**Problem:** The "Copy Link" button in the waiting room wasn't working.
+### 1. Copy Link Button (FIXED - Enhanced)
+**Problem:** The "Copy Link" button in the waiting room wasn't working reliably.
 
 **Solution:** 
-- Made the clipboard write operation `async/await`
-- Added error handling with try-catch
-- Shows error toast if copy fails
+- Added `preventDefault()` to prevent event bubbling issues
+- Enhanced with comprehensive debugging/logging
+- Uses single URL source for consistency (`shareableUrl` variable)
+- Improved error handling with try-catch blocks
+- Better cleanup for fallback method
+- Shows detailed console logs for troubleshooting
+- Modern Clipboard API with robust fallback to `execCommand`
+
+**What Changed:**
+- ✅ Button now has extensive logging (see console for "📋 Copy Link clicked")
+- ✅ Consistent URL handling throughout the waiting room
+- ✅ Better error messages and user feedback
+- ✅ Proper DOM cleanup even on errors
 
 **Location:** `src/pages/Game.tsx` - Waiting screen section
+
+**Documentation:** See `COPY_LINK_FIX.md` for detailed technical explanation
 
 ---
 

@@ -19,13 +19,16 @@ const Game = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const gameCodeFromUrl = searchParams.get("game");
   
-  // Only load saved name if NOT coming from a game link
+  // Always load saved player name to allow reconnection after refresh
   const [playerName, setPlayerName] = useState(() => {
-    // If there's a game code in URL, don't auto-load the name (show QuickJoin)
-    if (gameCodeFromUrl) {
-      return "";
-    }
     return localStorage.getItem("chess_player_name") || "";
+  });
+  
+  // Track if this is a new invite link (first time seeing this game code)
+  const [isNewInvite, setIsNewInvite] = useState(() => {
+    if (!gameCodeFromUrl) return false;
+    const lastGameCode = localStorage.getItem("last_game_code");
+    return lastGameCode !== gameCodeFromUrl;
   });
 
   // Debug logging
@@ -69,12 +72,15 @@ const Game = () => {
     timeoutWinner,
   } = useMultiplayerGame(gameCodeFromUrl, playerName);
 
-  // Save player name (only after joining a game, not on QuickJoin page)
+  // Save player name and game code (for reconnection after refresh)
   useEffect(() => {
     if (playerName && playerColor) {
       localStorage.setItem("chess_player_name", playerName);
     }
-  }, [playerName, playerColor]);
+    if (gameCodeFromUrl) {
+      localStorage.setItem("last_game_code", gameCodeFromUrl);
+    }
+  }, [playerName, playerColor, gameCodeFromUrl]);
 
   // Calculate derived values that need to be available for hooks
   const isMyTurn = playerColor === turn;
@@ -212,6 +218,8 @@ const Game = () => {
       await leaveGame();
       toast.info("Left the current game");
     }
+    // Clear saved game code
+    localStorage.removeItem("last_game_code");
     // Navigate back to lobby
     window.location.href = "/";
   };
@@ -221,18 +229,23 @@ const Game = () => {
     playerColor, 
     loading, 
     error,
+    isNewInvite,
     shouldShowLobby: !gameState || (gameState.status === "waiting" && !playerColor)
   });
 
-  // Show QuickJoin if game code in URL but no player name
-  if (gameCodeFromUrl && !playerName) {
-    console.log("✅ Showing QuickJoin for game:", gameCodeFromUrl);
+  // Show QuickJoin ONLY if:
+  // 1. Game code in URL
+  // 2. This is a new invite link (different from last game)
+  // 3. User is not already a player in this game (no playerColor assigned yet)
+  if (gameCodeFromUrl && isNewInvite && !playerColor) {
+    console.log("✅ Showing QuickJoin for NEW invite:", gameCodeFromUrl);
     return (
       <QuickJoin
         gameCode={gameCodeFromUrl}
         onJoin={async (name) => {
           console.log("QuickJoin: User clicked join with name:", name);
           setPlayerName(name);
+          setIsNewInvite(false);
           // Join the game with the provided name
           const success = await joinGame(gameCodeFromUrl, name);
           console.log("Join result:", success);
@@ -271,10 +284,14 @@ const Game = () => {
   
   // If game is waiting and I'm a player (creator), show waiting screen
   if (gameState.status === "waiting" && playerColor) {
+    const shareableUrl = window.location.href;
     console.log("Showing waiting screen - you created game, waiting for opponent", {
       status: gameState.status,
       white: gameState.white_player_name,
-      black: gameState.black_player_name
+      black: gameState.black_player_name,
+      gameCode: gameState.game_code,
+      shareableUrl: shareableUrl,
+      currentLocation: window.location
     });
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -298,36 +315,53 @@ const Game = () => {
             <p className="text-sm text-muted-foreground">Or share this link:</p>
             <div className="cyber-card bg-card p-3 rounded">
               <p className="font-mono text-sm text-neon-purple break-all">
-                {window.location.href}
+                {shareableUrl}
               </p>
             </div>
             <Button
-              onClick={async () => {
+              onClick={async (e) => {
+                e.preventDefault();
+                const linkToCopy = shareableUrl;
+                console.log("📋 Copy Link clicked:", {
+                  url: linkToCopy,
+                  hasClipboard: !!navigator.clipboard,
+                  isSecure: window.isSecureContext
+                });
+                
                 try {
                   // Try modern clipboard API first
                   if (navigator.clipboard && window.isSecureContext) {
-                    await navigator.clipboard.writeText(window.location.href);
+                    await navigator.clipboard.writeText(linkToCopy);
+                    console.log("✅ Link copied successfully via clipboard API");
                     toast.success("Link copied to clipboard!");
                   } else {
                     // Fallback for older browsers or non-secure contexts
+                    console.log("⚠️ Using fallback copy method");
                     const textArea = document.createElement("textarea");
-                    textArea.value = window.location.href;
+                    textArea.value = linkToCopy;
                     textArea.style.position = "fixed";
                     textArea.style.left = "-999999px";
                     textArea.style.top = "-999999px";
                     document.body.appendChild(textArea);
                     textArea.focus();
                     textArea.select();
-                    const successful = document.execCommand('copy');
-                    textArea.remove();
-                    if (successful) {
-                      toast.success("Link copied to clipboard!");
-                    } else {
-                      throw new Error("Copy command failed");
+                    
+                    try {
+                      const successful = document.execCommand('copy');
+                      textArea.remove();
+                      if (successful) {
+                        console.log("✅ Link copied successfully via execCommand");
+                        toast.success("Link copied to clipboard!");
+                      } else {
+                        throw new Error("Copy command failed");
+                      }
+                    } catch (cmdErr) {
+                      textArea.remove();
+                      throw cmdErr;
                     }
                   }
                 } catch (err) {
-                  console.error("Failed to copy:", err);
+                  console.error("❌ Failed to copy:", err);
                   toast.error("Failed to copy link. Please copy manually.");
                 }
               }}

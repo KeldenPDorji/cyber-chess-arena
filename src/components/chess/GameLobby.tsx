@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { TimerSettings } from "./TimerSettings";
 
 interface GameLobbyProps {
-  onCreateGame: () => Promise<string | null>;
+  onCreateGame: (preferredColor?: "w" | "b" | "random") => Promise<string | null>;
   onJoinGame: (code: string) => Promise<boolean>;
   onSetPlayerName: (name: string) => void;
   onSetTimeControl?: (minutes: number, increment: number) => void;
@@ -25,16 +25,17 @@ export const GameLobby = ({
   const [createdCode, setCreatedCode] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
+  const [preferredColor, setPreferredColor] = useState<"w" | "b" | "random">("random");
 
   const handleCreateGame = async () => {
     if (!playerName.trim()) {
       toast.error("Please enter your name first");
       return;
     }
-    console.log("Creating game...");
+    console.log("Creating game with preferred color:", preferredColor);
     setIsCreating(true);
     try {
-      const code = await onCreateGame();
+      const code = await onCreateGame(preferredColor);
       console.log("Game created with code:", code);
       if (code) {
         setCreatedCode(code);
@@ -118,6 +119,36 @@ export const GameLobby = ({
             />
           </div>
         )}
+
+        {/* Color Preference */}
+        <div className="mb-6">
+          <label className="block text-sm font-mono text-neon-cyan mb-2">
+            Preferred Color
+          </label>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setPreferredColor("w")}
+              variant={preferredColor === "w" ? "default" : "outline"}
+              className="flex-1 bg-white text-black font-mono"
+            >
+              White
+            </Button>
+            <Button
+              onClick={() => setPreferredColor("b")}
+              variant={preferredColor === "b" ? "default" : "outline"}
+              className="flex-1 bg-black text-white font-mono"
+            >
+              Black
+            </Button>
+            <Button
+              onClick={() => setPreferredColor("random")}
+              variant={preferredColor === "random" ? "default" : "outline"}
+              className="flex-1 bg-gradient-to-r from-neon-cyan to-neon-purple text-transparent bg-clip-text font-mono"
+            >
+              Random
+            </Button>
+          </div>
+        </div>
 
         {/* Created Game Display */}
         {createdCode && (

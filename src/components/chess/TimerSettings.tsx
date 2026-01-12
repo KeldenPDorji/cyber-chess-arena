@@ -16,24 +16,24 @@ interface TimerSettingsProps {
 }
 
 const timeControls = [
-  { label: "1 min", value: 1, increment: 0 },
-  { label: "1 | 1", value: 1, increment: 1 },
-  { label: "3 min", value: 3, increment: 0 },
-  { label: "3 | 2", value: 3, increment: 2 },
-  { label: "5 min", value: 5, increment: 0 },
-  { label: "5 | 3", value: 5, increment: 3 },
-  { label: "10 min", value: 10, increment: 0 },
-  { label: "10 | 5", value: 10, increment: 5 },
-  { label: "15 | 10", value: 15, increment: 10 },
-  { label: "30 min", value: 30, increment: 0 },
+  { label: "1 min", value: 1, increment: 0, id: "1-0" },
+  { label: "1 | 1", value: 1, increment: 1, id: "1-1" },
+  { label: "3 min", value: 3, increment: 0, id: "3-0" },
+  { label: "3 | 2", value: 3, increment: 2, id: "3-2" },
+  { label: "5 min", value: 5, increment: 0, id: "5-0" },
+  { label: "5 | 3", value: 5, increment: 3, id: "5-3" },
+  { label: "10 min", value: 10, increment: 0, id: "10-0" },
+  { label: "10 | 5", value: 10, increment: 5, id: "10-5" },
+  { label: "15 | 10", value: 15, increment: 10, id: "15-10" },
+  { label: "30 min", value: 30, increment: 0, id: "30-0" },
 ];
 
 export const TimerSettings = ({ onTimeSelect, disabled }: TimerSettingsProps) => {
-  const [selectedTime, setSelectedTime] = useState<string>("10");
+  const [selectedTime, setSelectedTime] = useState<string>("10-0");
 
   const handleTimeChange = (value: string) => {
     setSelectedTime(value);
-    const control = timeControls.find((c) => c.value.toString() === value);
+    const control = timeControls.find((c) => c.id === value);
     if (control) {
       onTimeSelect(control.value, control.increment);
     }
@@ -62,8 +62,8 @@ export const TimerSettings = ({ onTimeSelect, disabled }: TimerSettingsProps) =>
           <SelectContent className="bg-background border-neon-purple/30">
             {timeControls.map((control) => (
               <SelectItem
-                key={control.label}
-                value={control.value.toString()}
+                key={control.id}
+                value={control.id}
                 className="font-mono focus:bg-neon-purple/20 focus:text-neon-cyan"
               >
                 <div className="flex items-center gap-2">

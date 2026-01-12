@@ -18,6 +18,7 @@ interface GameControlsProps {
   onResign: () => void;
   onOfferDraw: () => void;
   onAcceptDraw?: () => void;
+  onDeclineDraw?: () => void;
   gameOver: boolean;
   drawOffered?: boolean;
 }
@@ -27,6 +28,7 @@ export const GameControls = ({
   onResign,
   onOfferDraw,
   onAcceptDraw,
+  onDeclineDraw,
   gameOver,
   drawOffered = false,
 }: GameControlsProps) => {
@@ -42,13 +44,48 @@ export const GameControls = ({
       </div>
 
       <div className="grid grid-cols-1 gap-3">
-        <Button
-          onClick={onNewGame}
-          className="cyber-button font-cyber text-neon-cyan hover:text-neon-cyan bg-transparent"
-        >
-          <RotateCcw className="w-4 h-4 mr-2" />
-          New Game
-        </Button>
+        {gameOver ? (
+          <Button
+            onClick={onNewGame}
+            className="cyber-button font-cyber text-neon-cyan hover:text-neon-cyan bg-transparent"
+          >
+            <RotateCcw className="w-4 h-4 mr-2" />
+            New Game
+          </Button>
+        ) : (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                className="cyber-button font-cyber text-neon-cyan hover:text-neon-cyan"
+              >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Leave & New Game
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="bg-background border-neon-cyan/30">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-neon-cyan font-cyber">
+                  Leave Current Game?
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  You are about to leave the current game. Your opponent will be notified and will win by default. Are you sure you want to continue?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="border-neon-purple/30">
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={onNewGame}
+                  className="bg-neon-cyan text-background hover:bg-neon-cyan/80"
+                >
+                  Leave Game
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
 
         {!gameOver && (
           <>
@@ -73,7 +110,10 @@ export const GameControls = ({
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel className="border-neon-cyan/30">
+                    <AlertDialogCancel 
+                      onClick={onDeclineDraw}
+                      className="border-destructive/30 hover:bg-destructive/10"
+                    >
                       Decline
                     </AlertDialogCancel>
                     <AlertDialogAction

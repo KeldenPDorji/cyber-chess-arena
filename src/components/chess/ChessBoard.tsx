@@ -29,17 +29,17 @@ export const ChessBoard = ({
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.5 }}
-      className="relative"
+      className="relative w-full"
     >
       {/* Outer glow border */}
-      <div className="absolute -inset-1 bg-gradient-to-r from-neon-cyan via-neon-purple to-neon-magenta rounded-lg opacity-50 blur-sm" />
+      <div className="absolute -inset-0.5 sm:-inset-1 bg-gradient-to-r from-neon-cyan via-neon-purple to-neon-magenta rounded-lg opacity-50 blur-sm" />
       
       {/* Board container */}
-      <div className="relative cyber-card rounded-lg p-1 overflow-hidden scanlines">
+      <div className="relative cyber-card rounded-lg p-0.5 sm:p-1 overflow-hidden scanlines">
         {/* File labels (top) */}
-        <div className="flex justify-around px-6 py-1">
+        <div className="flex justify-around px-3 sm:px-6 py-0.5 sm:py-1">
           {displayFiles.map((file) => (
-            <span key={file} className="text-xs font-cyber text-neon-cyan/70 uppercase">
+            <span key={file} className="text-[10px] sm:text-xs font-cyber text-neon-cyan/70 uppercase">
               {file}
             </span>
           ))}
@@ -47,16 +47,16 @@ export const ChessBoard = ({
 
         <div className="flex">
           {/* Rank labels (left) */}
-          <div className="flex flex-col justify-around py-1 px-2">
+          <div className="flex flex-col justify-around py-0.5 sm:py-1 px-1 sm:px-2">
             {displayRanks.map((rank) => (
-              <span key={rank} className="text-xs font-cyber text-neon-cyan/70">
+              <span key={rank} className="text-[10px] sm:text-xs font-cyber text-neon-cyan/70">
                 {rank}
               </span>
             ))}
           </div>
 
           {/* Chess board grid */}
-          <div className="grid grid-cols-8 gap-0 border border-neon-cyan/30 rounded overflow-hidden">
+          <div className="grid grid-cols-8 gap-0 border border-neon-cyan/30 rounded overflow-hidden flex-1">
             {displayRanks.map((rank, rankIndex) =>
               displayFiles.map((file, fileIndex) => {
                 const square = `${file}${rank}` as Square;
@@ -84,9 +84,9 @@ export const ChessBoard = ({
           </div>
 
           {/* Rank labels (right) */}
-          <div className="flex flex-col justify-around py-1 px-2">
+          <div className="flex flex-col justify-around py-0.5 sm:py-1 px-1 sm:px-2">
             {displayRanks.map((rank) => (
-              <span key={rank} className="text-xs font-cyber text-neon-cyan/70">
+              <span key={rank} className="text-[10px] sm:text-xs font-cyber text-neon-cyan/70">
                 {rank}
               </span>
             ))}
@@ -94,9 +94,9 @@ export const ChessBoard = ({
         </div>
 
         {/* File labels (bottom) */}
-        <div className="flex justify-around px-6 py-1">
+        <div className="flex justify-around px-3 sm:px-6 py-0.5 sm:py-1">
           {displayFiles.map((file) => (
-            <span key={file} className="text-xs font-cyber text-neon-cyan/70 uppercase">
+            <span key={file} className="text-[10px] sm:text-xs font-cyber text-neon-cyan/70 uppercase">
               {file}
             </span>
           ))}

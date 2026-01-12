@@ -8,6 +8,8 @@ interface GameStatusProps {
   turn: "w" | "b";
   winner?: "w" | "b" | null;
   resignedBy?: "w" | "b" | null;
+  leftBy?: "w" | "b" | null;
+  timeoutWinner?: "w" | "b" | null;
 }
 
 export const GameStatus = ({
@@ -17,6 +19,8 @@ export const GameStatus = ({
   turn,
   winner,
   resignedBy,
+  leftBy,
+  timeoutWinner,
 }: GameStatusProps) => {
   return (
     <motion.div
@@ -25,7 +29,43 @@ export const GameStatus = ({
       className="cyber-card rounded-lg p-4 text-center"
     >
       <AnimatePresence mode="wait">
-        {resignedBy && (
+        {timeoutWinner && (
+          <motion.div
+            key="timeout"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            exit={{ scale: 0 }}
+            className="flex flex-col items-center gap-2"
+          >
+            <Trophy className={`w-12 h-12 ${timeoutWinner === "w" ? "text-neon-cyan" : "text-neon-magenta"}`} />
+            <span className="font-cyber text-2xl text-neon-yellow">
+              Time Out!
+            </span>
+            <span className="text-muted-foreground">
+              {timeoutWinner === "w" ? "White" : "Black"} wins
+            </span>
+          </motion.div>
+        )}
+
+        {leftBy && !timeoutWinner && (
+          <motion.div
+            key="left"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            exit={{ scale: 0 }}
+            className="flex flex-col items-center gap-2"
+          >
+            <Flag className="w-12 h-12 text-neon-purple" />
+            <span className="font-cyber text-2xl text-neon-purple">
+              {leftBy === "w" ? "White" : "Black"} Left
+            </span>
+            <span className="text-muted-foreground">
+              {leftBy === "w" ? "Black" : "White"} wins
+            </span>
+          </motion.div>
+        )}
+
+        {resignedBy && !leftBy && !timeoutWinner && (
           <motion.div
             key="resigned"
             initial={{ scale: 0 }}
@@ -43,7 +83,7 @@ export const GameStatus = ({
           </motion.div>
         )}
 
-        {isCheckmate && !resignedBy && (
+        {isCheckmate && !resignedBy && !leftBy && !timeoutWinner && (
           <motion.div
             key="checkmate"
             initial={{ scale: 0 }}
@@ -61,7 +101,7 @@ export const GameStatus = ({
           </motion.div>
         )}
 
-        {isDraw && !isCheckmate && !resignedBy && (
+        {isDraw && !isCheckmate && !resignedBy && !leftBy && !timeoutWinner && (
           <motion.div
             key="draw"
             initial={{ scale: 0 }}
@@ -76,7 +116,7 @@ export const GameStatus = ({
           </motion.div>
         )}
 
-        {isCheck && !isCheckmate && !resignedBy && (
+        {isCheck && !isCheckmate && !resignedBy && !leftBy && !timeoutWinner && (
           <motion.div
             key="check"
             initial={{ scale: 0 }}

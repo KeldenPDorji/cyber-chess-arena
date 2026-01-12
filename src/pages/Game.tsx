@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ChessBoard } from "@/components/chess/ChessBoard";
@@ -8,6 +8,7 @@ import { GameControls } from "@/components/chess/GameControls";
 import { GameStatus } from "@/components/chess/GameStatus";
 import { GameLobby } from "@/components/chess/GameLobby";
 import { TimerSettings } from "@/components/chess/TimerSettings";
+import { QuickJoin } from "@/components/chess/QuickJoin";
 import { useMultiplayerGame } from "@/hooks/useMultiplayerGame";
 import { Cpu, Zap, Crown, Users } from "lucide-react";
 import { toast } from "sonner";
@@ -19,6 +20,14 @@ const Game = () => {
     localStorage.getItem("chess_player_name") || ""
   );
   const gameCodeFromUrl = searchParams.get("game");
+
+  // Debug logging
+  console.log("🔍 Game.tsx render:", {
+    gameCodeFromUrl,
+    playerName,
+    hasPlayerName: !!playerName,
+    shouldShowQuickJoin: !!(gameCodeFromUrl && !playerName)
+  });
 
   const {
     game,
@@ -35,6 +44,8 @@ const Game = () => {
     resign,
     offerDraw,
     acceptDraw,
+    declineDraw,
+    leaveGame,
     setTimeControl,
     whiteCaptured,
     blackCaptured,
@@ -45,6 +56,8 @@ const Game = () => {
     turn,
     winner,
     resignedBy,
+    leftBy,
+    timeoutWinner,
   } = useMultiplayerGame(gameCodeFromUrl, playerName);
 
   // Save player name
@@ -68,6 +81,39 @@ const Game = () => {
   const drawOfferedByOpponent = 
     gameState?.draw_offered_by && 
     gameState?.draw_offered_by !== playerColor;
+  
+  const drawOfferedByMe = 
+    gameState?.draw_offered_by && 
+    gameState?.draw_offered_by === playerColor;
+
+  // Track previous draw offer state to detect decline
+  const prevDrawOfferedByMe = useRef(drawOfferedByMe);
+  
+  useEffect(() => {
+    // If draw was offered by me, but now it's cleared and game is still active
+    if (prevDrawOfferedByMe.current && !gameState?.draw_offered_by && gameState?.status === "active") {
+      toast.error("Draw offer declined by opponent", {
+        duration: 3000,
+      });
+    }
+    prevDrawOfferedByMe.current = drawOfferedByMe;
+  }, [gameState?.draw_offered_by, gameState?.status, drawOfferedByMe]);
+
+  // Show toast when timeout occurs
+  useEffect(() => {
+    if (timeoutWinner) {
+      const iWon = timeoutWinner === playerColor;
+      if (iWon) {
+        toast.success("Your opponent ran out of time! You win!", {
+          duration: 5000,
+        });
+      } else {
+        toast.error("You ran out of time!", {
+          duration: 5000,
+        });
+      }
+    }
+  }, [timeoutWinner, playerColor]);
 
   // Show toast when draw is offered - MUST be before any early returns
   useEffect(() => {
@@ -90,9 +136,21 @@ const Game = () => {
     }
   }, [resignedBy, playerColor]);
 
+  // Show toast when someone leaves - MUST be before any early returns
+  useEffect(() => {
+    if (leftBy) {
+      const isOpponent = leftBy !== playerColor;
+      if (isOpponent) {
+        toast.success("Your opponent left the game! You win!", {
+          duration: 5000,
+        });
+      }
+    }
+  }, [leftBy, playerColor]);
+
   // Wrap createGame to update URL
-  const handleCreateGame = async () => {
-    const code = await createGame();
+  const handleCreateGame = async (preferredColor?: "w" | "b" | "random") => {
+    const code = await createGame(preferredColor);
     if (code) {
       console.log("Game created, updating URL with code:", code);
       setSearchParams({ game: code });
@@ -101,6 +159,10 @@ const Game = () => {
   };
 
   const handleOfferDraw = () => {
+    console.log("Offering draw, current state:", { 
+      gameState: gameState?.draw_offered_by, 
+      playerColor 
+    });
     offerDraw();
     toast.success("Draw offer sent to opponent");
   };
@@ -110,17 +172,56 @@ const Game = () => {
     toast.success("Draw accepted!");
   };
 
+  const handleDeclineDraw = () => {
+    declineDraw();
+    toast.info("Draw offer declined");
+  };
+
   const handleResign = () => {
     resign();
     toast.info("You resigned");
   };
 
-  console.log("Game state:", { 
+  const handleNewGame = async () => {
+    // If there's an active game, leave it first
+    if (gameState && gameState.status !== "finished" && gameState.status !== "draw") {
+      await leaveGame();
+      toast.info("Left the current game");
+    }
+    // Navigate back to lobby
+    window.location.href = "/";
+  };
+
+  console.log("Game state:", {
     gameState, 
     playerColor, 
     loading, 
     error,
     shouldShowLobby: !gameState || (gameState.status === "waiting" && !playerColor)
+  });
+
+  // Show QuickJoin if game code in URL but no player name
+  if (gameCodeFromUrl && !playerName) {
+    console.log("✅ Showing QuickJoin for game:", gameCodeFromUrl);
+    return (
+      <QuickJoin
+        gameCode={gameCodeFromUrl}
+        onJoin={(name) => {
+          console.log("QuickJoin: User entered name:", name);
+          setPlayerName(name);
+          // After setting name, the useEffect will auto-join
+        }}
+        loading={loading}
+      />
+    );
+  }
+
+  console.log("❌ NOT showing QuickJoin because:", {
+    hasGameCode: !!gameCodeFromUrl,
+    hasPlayerName: !!playerName,
+    playerName,
+    gameState: gameState?.status,
+    playerColor
   });
 
   // Show lobby if no active game
@@ -186,28 +287,28 @@ const Game = () => {
   });
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
+    <div className="min-h-screen bg-background p-2 sm:p-4 md:p-8">
       {/* Header */}
       <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-8"
+        className="text-center mb-4 md:mb-8"
       >
-        <div className="flex items-center justify-center gap-3 mb-2">
-          <Zap className="w-8 h-8 text-neon-cyan animate-pulse" />
-          <h1 className="font-cyber text-4xl md:text-5xl font-bold bg-gradient-to-r from-neon-cyan via-neon-purple to-neon-magenta bg-clip-text text-transparent">
+        <div className="flex items-center justify-center gap-2 md:gap-3 mb-2">
+          <Zap className="w-6 h-6 md:w-8 md:h-8 text-neon-cyan animate-pulse" />
+          <h1 className="font-cyber text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-neon-cyan via-neon-purple to-neon-magenta bg-clip-text text-transparent">
             NEON CHESS
           </h1>
-          <Zap className="w-8 h-8 text-neon-magenta animate-pulse" />
+          <Zap className="w-6 h-6 md:w-8 md:h-8 text-neon-magenta animate-pulse" />
         </div>
-        <div className="flex items-center justify-center gap-4 text-muted-foreground font-mono text-sm">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-muted-foreground font-mono text-xs sm:text-sm">
           <span className="flex items-center gap-1">
-            <Users className="w-4 h-4" />
+            <Users className="w-3 h-3 sm:w-4 sm:h-4" />
             Game: {gameState.game_code}
           </span>
           {playerColor && (
             <span className="flex items-center gap-1">
-              <Crown className="w-4 h-4" />
+              <Crown className="w-3 h-3 sm:w-4 sm:h-4" />
               You are {playerColor === "w" ? "White" : "Black"}
             </span>
           )}
@@ -219,7 +320,7 @@ const Game = () => {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className={`text-center mb-4 font-cyber text-lg ${
+          className={`text-center mb-3 md:mb-4 font-cyber text-base md:text-lg ${
             isMyTurn ? "text-neon-cyan" : "text-muted-foreground"
           }`}
         >
@@ -228,9 +329,21 @@ const Game = () => {
       )}
 
       {/* Main game layout */}
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] gap-6 items-start">
-        {/* Left sidebar - Player info & controls */}
-        <div className="space-y-4 order-2 lg:order-1">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] gap-3 md:gap-6 items-start">
+        {/* Top section on mobile - Black player */}
+        <div className="lg:hidden space-y-3">
+          <PlayerInfo
+            name={gameState.black_player_name || "Waiting..."}
+            rating={1500}
+            time={gameState.black_time}
+            isActive={turn === "b" && !gameOver}
+            isWhite={false}
+            capturedPieces={blackCaptured}
+          />
+        </div>
+
+        {/* Left sidebar - Desktop only */}
+        <div className="hidden lg:block space-y-4 order-2 lg:order-1">
           <PlayerInfo
             name={gameState.black_player_name || "Waiting..."}
             rating={1500}
@@ -247,6 +360,8 @@ const Game = () => {
             turn={turn}
             winner={winner}
             resignedBy={resignedBy}
+            leftBy={leftBy}
+            timeoutWinner={timeoutWinner}
           />
 
           <PlayerInfo
@@ -260,8 +375,8 @@ const Game = () => {
         </div>
 
         {/* Chess board (center) */}
-        <div className="order-1 lg:order-2 flex justify-center">
-          <div className="w-full max-w-[600px]">
+        <div className="order-1 lg:order-2 flex justify-center px-2 sm:px-0">
+          <div className="w-full max-w-[95vw] sm:max-w-[500px] md:max-w-[600px]">
             <ChessBoard
               game={game}
               selectedSquare={selectedSquare}
@@ -273,14 +388,41 @@ const Game = () => {
           </div>
         </div>
 
+        {/* Bottom section on mobile - White player */}
+        <div className="lg:hidden space-y-3">
+          <PlayerInfo
+            name={gameState.white_player_name || "Waiting..."}
+            rating={1450}
+            time={gameState.white_time}
+            isActive={turn === "w" && !gameOver}
+            isWhite={true}
+            capturedPieces={whiteCaptured}
+          />
+        </div>
+
         {/* Right sidebar - Move history & controls */}
-        <div className="space-y-4 order-3">
+        <div className="space-y-3 md:space-y-4 order-3">
+          {/* Game status on mobile */}
+          <div className="lg:hidden">
+            <GameStatus
+              isCheck={isCheck}
+              isCheckmate={isCheckmate}
+              isDraw={isDraw}
+              turn={turn}
+              winner={winner}
+              resignedBy={resignedBy}
+              leftBy={leftBy}
+              timeoutWinner={timeoutWinner}
+            />
+          </div>
+          
           <MoveHistory moves={moveHistory} />
           <GameControls
-            onNewGame={() => window.location.href = "/"}
+            onNewGame={handleNewGame}
             onResign={handleResign}
             onOfferDraw={handleOfferDraw}
             onAcceptDraw={drawOfferedByOpponent ? handleAcceptDraw : undefined}
+            onDeclineDraw={drawOfferedByOpponent ? handleDeclineDraw : undefined}
             gameOver={gameOver}
             drawOffered={drawOfferedByOpponent}
           />

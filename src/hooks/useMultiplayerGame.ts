@@ -53,21 +53,37 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
   }, []);
 
   // Create a new game
-  const createGame = useCallback(async () => {
+  const createGame = useCallback(async (preferredColor: "w" | "b" | "random" = "random") => {
     const code = generateGameCode();
     const totalSeconds = timeControl.minutes * 60;
     
-    console.log("Creating game with code:", code, "player:", playerName);
+    // Determine actual color based on preference
+    let actualColor: "w" | "b";
+    if (preferredColor === "random") {
+      actualColor = Math.random() < 0.5 ? "w" : "b";
+    } else {
+      actualColor = preferredColor;
+    }
+    
+    console.log("Creating game with code:", code, "player:", playerName, "color:", actualColor);
+    
+    const gameData: any = {
+      game_code: code,
+      status: "waiting",
+      white_time: totalSeconds,
+      black_time: totalSeconds,
+    };
+    
+    // Assign player to their preferred color
+    if (actualColor === "w") {
+      gameData.white_player_name = playerName;
+    } else {
+      gameData.black_player_name = playerName;
+    }
     
     const { data, error } = await supabase
       .from("chess_games")
-      .insert({
-        game_code: code,
-        white_player_name: playerName,
-        status: "waiting",
-        white_time: totalSeconds,
-        black_time: totalSeconds,
-      })
+      .insert(gameData)
       .select()
       .single();
 
@@ -79,7 +95,7 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
 
     console.log("Game created successfully:", data);
     setGameState(data as unknown as GameState);
-    setPlayerColor("w");
+    setPlayerColor(actualColor);
     setLoading(false);
     return code;
   }, [playerName, generateGameCode, timeControl]);
@@ -206,12 +222,23 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
       return;
     }
 
+    // Only start timer after first move
+    const moveCount = game.history().length;
+    if (moveCount === 0) {
+      console.log("Timer not started - waiting for first move");
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      return;
+    }
+
     // Clear any existing timer
     if (timerRef.current) {
       clearInterval(timerRef.current);
     }
 
-    console.log("Starting timer for", gameState.turn === "w" ? "white" : "black");
+    console.log("Starting timer for", gameState.turn === "w" ? "white" : "black", "after", moveCount, "moves");
 
     timerRef.current = setInterval(async () => {
       // Only the player whose turn it is updates their timer
@@ -252,7 +279,7 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
         timerRef.current = null;
       }
     };
-  }, [gameState?.id, gameState?.status, gameState?.turn, gameState?.white_time, gameState?.black_time, playerColor]);
+  }, [gameState?.id, gameState?.status, gameState?.turn, gameState?.white_time, gameState?.black_time, playerColor, game]);
 
   const handleSquareClick = useCallback(
     async (square: Square) => {
@@ -352,10 +379,19 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
   const offerDraw = useCallback(async () => {
     if (!gameState || !playerColor) return;
     
-    await supabase
+    console.log("Offering draw, playerColor:", playerColor, "gameState.id:", gameState.id);
+    
+    const { data, error } = await supabase
       .from("chess_games")
       .update({ draw_offered_by: playerColor } as any)
-      .eq("id", gameState.id);
+      .eq("id", gameState.id)
+      .select();
+    
+    if (error) {
+      console.error("Error offering draw:", error);
+    } else {
+      console.log("Draw offer successful, updated data:", data);
+    }
   }, [gameState, playerColor]);
 
   const acceptDraw = useCallback(async () => {
@@ -366,6 +402,33 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
       .update({ status: "draw", draw_offered_by: null } as any)
       .eq("id", gameState.id);
   }, [gameState]);
+
+  const declineDraw = useCallback(async () => {
+    if (!gameState) return;
+    
+    console.log("Declining draw offer");
+    await supabase
+      .from("chess_games")
+      .update({ draw_offered_by: null } as any)
+      .eq("id", gameState.id);
+  }, [gameState]);
+
+  const leaveGame = useCallback(async () => {
+    if (!gameState || !playerColor) return;
+    
+    console.log(playerColor, "is leaving the game");
+    // Store leave info in PGN comment
+    const leaveNote = `{${playerColor === "w" ? "White" : "Black"} left the game}`;
+    const updatedPgn = gameState.pgn ? `${gameState.pgn} ${leaveNote}` : leaveNote;
+    
+    await supabase
+      .from("chess_games")
+      .update({ 
+        status: "finished",
+        pgn: updatedPgn 
+      } as any)
+      .eq("id", gameState.id);
+  }, [gameState, playerColor]);
 
   // Calculate captured pieces
   const getCapturedPieces = useCallback(() => {
@@ -389,10 +452,30 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
 
   const { whiteCaptured, blackCaptured } = getCapturedPieces();
 
-  // Detect resignation from PGN
+  // Detect resignation and left game from PGN
   const resignedBy = gameState?.pgn?.includes("{White resigned}") ? "w" as const :
                      gameState?.pgn?.includes("{Black resigned}") ? "b" as const :
                      null;
+  
+  const leftBy = gameState?.pgn?.includes("{White left the game}") ? "w" as const :
+                 gameState?.pgn?.includes("{Black left the game}") ? "b" as const :
+                 null;
+
+  // Detect timeout winner
+  const timeoutWinner = gameState?.white_time === 0 ? "b" as const :
+                        gameState?.black_time === 0 ? "w" as const :
+                        null;
+
+  // Determine overall winner
+  const winner = game.isCheckmate() 
+    ? (game.turn() === "w" ? "b" : "w") as "w" | "b"
+    : timeoutWinner
+    ? timeoutWinner
+    : resignedBy 
+    ? (resignedBy === "w" ? "b" : "w") as "w" | "b"
+    : leftBy
+    ? (leftBy === "w" ? "b" : "w") as "w" | "b"
+    : null;
 
   return {
     game,
@@ -409,6 +492,8 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
     resign,
     offerDraw,
     acceptDraw,
+    declineDraw,
+    leaveGame,
     setTimeControl,
     whiteCaptured,
     blackCaptured,
@@ -417,7 +502,9 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
     isCheckmate: game.isCheckmate(),
     isDraw: game.isDraw() || gameState?.status === "draw",
     turn: game.turn(),
-    winner: game.isCheckmate() ? (game.turn() === "w" ? "b" : "w") as "w" | "b" : null,
+    winner,
     resignedBy,
+    leftBy,
+    timeoutWinner,
   };
 };

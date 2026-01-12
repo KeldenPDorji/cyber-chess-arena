@@ -37,6 +37,7 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [timeControl, setTimeControl] = useState({ minutes: 10, increment: 0 });
+  const [pendingPromotion, setPendingPromotion] = useState<{ from: Square; to: Square } | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Initial load: fetch game if gameCode provided (for QuickJoin and spectators)
@@ -417,11 +418,24 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
       const piece = game.get(square);
 
       if (selectedSquare) {
+        // Check if this is a pawn promotion move
+        const movingPiece = game.get(selectedSquare);
+        const isPromotion = movingPiece?.type === 'p' && 
+          ((movingPiece.color === 'w' && square[1] === '8') || 
+           (movingPiece.color === 'b' && square[1] === '1'));
+
+        if (isPromotion) {
+          // Store the move and wait for user to select promotion piece
+          setPendingPromotion({ from: selectedSquare, to: square });
+          setSelectedSquare(null);
+          return;
+        }
+
+        // Try to make the move without promotion
         try {
           const move = game.move({
             from: selectedSquare,
             to: square,
-            promotion: "q",
           });
 
           if (move) {
@@ -644,6 +658,63 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
     ? (leftBy === "w" ? "b" : "w") as "w" | "b"
     : null;
 
+  // Handle pawn promotion piece selection
+  const handlePromotion = useCallback(async (piece: "q" | "r" | "b" | "n") => {
+    if (!pendingPromotion || !gameState) return;
+
+    try {
+      const move = game.move({
+        from: pendingPromotion.from,
+        to: pendingPromotion.to,
+        promotion: piece,
+      });
+
+      if (move) {
+        console.log("♟️ Promotion move made:", move);
+        const newFen = game.fen();
+        const newPgn = game.pgn();
+        const isGameOver = game.isGameOver();
+
+        const timeUpdate: any = {
+          fen: newFen,
+          pgn: newPgn,
+          turn: game.turn(),
+          status: isGameOver ? "finished" : "active",
+        };
+        
+        if (gameState.draw_offered_by !== undefined) {
+          timeUpdate.draw_offered_by = null;
+        }
+
+        if (gameState.time_increment && gameState.time_increment > 0) {
+          if (playerColor === "w") {
+            timeUpdate.white_time = gameState.white_time + gameState.time_increment;
+          } else {
+            timeUpdate.black_time = gameState.black_time + gameState.time_increment;
+          }
+        }
+
+        console.log("📤 Updating database with promotion move:", timeUpdate);
+        const { error } = await supabase
+          .from("chess_games")
+          .update(timeUpdate)
+          .eq("id", gameState.id);
+
+        if (error) {
+          console.error("❌ Failed to update game:", error);
+        } else {
+          console.log("✅ Promotion move synced");
+        }
+
+        setLastMove({ from: move.from as Square, to: move.to as Square });
+        setPendingPromotion(null);
+      }
+    } catch (err) {
+      console.error("Failed to make promotion move:", err);
+      setPendingPromotion(null);
+    }
+  }, [pendingPromotion, gameState, game, playerColor]);
+
   return {
     game,
     gameState,
@@ -656,6 +727,8 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
     createGame,
     joinGame,
     handleSquareClick,
+    handlePromotion,
+    pendingPromotion,
     resign,
     offerDraw,
     acceptDraw,

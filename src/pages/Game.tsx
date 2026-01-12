@@ -9,6 +9,7 @@ import { GameStatus } from "@/components/chess/GameStatus";
 import { GameLobby } from "@/components/chess/GameLobby";
 import { TimerSettings } from "@/components/chess/TimerSettings";
 import { QuickJoin } from "@/components/chess/QuickJoin";
+import { PromotionDialog } from "@/components/chess/PromotionDialog";
 import { useMultiplayerGame } from "@/hooks/useMultiplayerGame";
 import { Cpu, Zap, Crown, Users } from "lucide-react";
 import { toast } from "sonner";
@@ -47,6 +48,8 @@ const Game = () => {
     createGame,
     joinGame,
     handleSquareClick,
+    handlePromotion,
+    pendingPromotion,
     resign,
     offerDraw,
     acceptDraw,
@@ -98,12 +101,15 @@ const Game = () => {
   useEffect(() => {
     // If draw was offered by me, but now it's cleared and game is still active
     if (prevDrawOfferedByMe.current && !gameState?.draw_offered_by && gameState?.status === "active") {
-      toast.error("Draw offer declined by opponent", {
+      const opponentName = playerColor === "w" 
+        ? gameState.black_player_name 
+        : gameState.white_player_name;
+      toast.error(`Draw offer declined by ${opponentName || "opponent"}`, {
         duration: 3000,
       });
     }
     prevDrawOfferedByMe.current = drawOfferedByMe;
-  }, [gameState?.draw_offered_by, gameState?.status, drawOfferedByMe]);
+  }, [gameState?.draw_offered_by, gameState?.status, drawOfferedByMe, playerColor, gameState?.black_player_name, gameState?.white_player_name]);
 
   // Show toast when timeout occurs
   useEffect(() => {
@@ -296,9 +302,34 @@ const Game = () => {
               </p>
             </div>
             <Button
-              onClick={() => {
-                navigator.clipboard.writeText(window.location.href);
-                toast.success("Link copied to clipboard!");
+              onClick={async () => {
+                try {
+                  // Try modern clipboard API first
+                  if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(window.location.href);
+                    toast.success("Link copied to clipboard!");
+                  } else {
+                    // Fallback for older browsers or non-secure contexts
+                    const textArea = document.createElement("textarea");
+                    textArea.value = window.location.href;
+                    textArea.style.position = "fixed";
+                    textArea.style.left = "-999999px";
+                    textArea.style.top = "-999999px";
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    const successful = document.execCommand('copy');
+                    textArea.remove();
+                    if (successful) {
+                      toast.success("Link copied to clipboard!");
+                    } else {
+                      throw new Error("Copy command failed");
+                    }
+                  }
+                } catch (err) {
+                  console.error("Failed to copy:", err);
+                  toast.error("Failed to copy link. Please copy manually.");
+                }
               }}
               className="w-full cyber-button"
             >
@@ -536,6 +567,13 @@ const Game = () => {
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}
         className="fixed bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-neon-cyan via-neon-purple to-neon-magenta opacity-50"
+      />
+
+      {/* Pawn Promotion Dialog */}
+      <PromotionDialog
+        open={!!pendingPromotion}
+        onSelect={handlePromotion}
+        isWhite={playerColor === "w"}
       />
     </div>
   );

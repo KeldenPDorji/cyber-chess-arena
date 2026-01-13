@@ -42,7 +42,11 @@ export const SpectatorIndicator = ({ gameId }: SpectatorIndicatorProps) => {
 
     // Subscribe to spectator changes with immediate updates
     const channel = supabase
-      .channel(`spectators:${gameId}`)
+      .channel(`spectators:${gameId}`, {
+        config: {
+          broadcast: { self: true }, // Receive own messages for instant feedback
+        },
+      })
       .on(
         "postgres_changes",
         {
@@ -62,6 +66,7 @@ export const SpectatorIndicator = ({ gameId }: SpectatorIndicatorProps) => {
                 return prev;
               }
               devLog.log("👁️ Spectator joined:", newSpectator.spectator_name);
+              // Immediate update - add to list right away
               return [...prev, newSpectator];
             });
           } else if (payload.eventType === "DELETE") {
@@ -69,6 +74,7 @@ export const SpectatorIndicator = ({ gameId }: SpectatorIndicatorProps) => {
             setSpectators((prev) => {
               const filtered = prev.filter((s) => s.id !== deletedId);
               devLog.log("👁️ Spectator left, remaining:", filtered.length);
+              // Immediate update - remove from list right away
               return filtered;
             });
           } else if (payload.eventType === "UPDATE") {
@@ -81,12 +87,15 @@ export const SpectatorIndicator = ({ gameId }: SpectatorIndicatorProps) => {
       )
       .subscribe((status) => {
         devLog.log("👁️ Spectator subscription status:", status);
+        if (status === "SUBSCRIBED") {
+          devLog.log("✅ Successfully subscribed to spectator updates");
+        }
       });
 
-    // Periodic refresh to ensure accuracy (every 30 seconds)
+    // Periodic refresh to ensure accuracy (every 15 seconds instead of 30)
     const refreshInterval = setInterval(() => {
       fetchSpectators();
-    }, 30000);
+    }, 15000);
 
     return () => {
       clearInterval(refreshInterval);

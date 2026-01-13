@@ -61,14 +61,17 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string, 
 
       devLog.log("✅ Initial game data loaded:", data);
       
-      // Check if this player is already in the game
-      if (playerName) {
+      // Check if this player is already in the game (as a player, not spectator)
+      // Only set playerColor if they're actually one of the two players
+      if (playerName && !spectatorId) {
         if (data.white_player_name === playerName) {
           setPlayerColor("w");
           devLog.log("✅ You are already white player");
         } else if (data.black_player_name === playerName) {
           setPlayerColor("b");
           devLog.log("✅ You are already black player");
+        } else {
+          devLog.log("ℹ️ You are not a player in this game");
         }
       }
 

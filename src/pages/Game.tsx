@@ -119,8 +119,8 @@ const Game = () => {
   const prevDrawOfferedByMe = useRef(drawOfferedByMe);
   
   useEffect(() => {
-    // If draw was offered by me, but now it's cleared and game is still active
-    if (prevDrawOfferedByMe.current && !gameState?.draw_offered_by && gameState?.status === "active") {
+    // If draw was offered by me, but now it's cleared and game is still active - NOT for spectators
+    if (prevDrawOfferedByMe.current && !gameState?.draw_offered_by && gameState?.status === "active" && !isSpectator) {
       const opponentName = playerColor === "w" 
         ? gameState.black_player_name 
         : gameState.white_player_name;
@@ -129,11 +129,11 @@ const Game = () => {
       });
     }
     prevDrawOfferedByMe.current = drawOfferedByMe;
-  }, [gameState?.draw_offered_by, gameState?.status, drawOfferedByMe, playerColor, gameState?.black_player_name, gameState?.white_player_name]);
+  }, [gameState?.draw_offered_by, gameState?.status, drawOfferedByMe, playerColor, gameState?.black_player_name, gameState?.white_player_name, isSpectator]);
 
-  // Show toast when timeout occurs
+  // Show toast when timeout occurs - NOT for spectators
   useEffect(() => {
-    if (timeoutWinner) {
+    if (timeoutWinner && !isSpectator) {
       const iWon = timeoutWinner === playerColor;
       if (iWon) {
         toast.success("Your opponent ran out of time! You win!", {
@@ -145,20 +145,20 @@ const Game = () => {
         });
       }
     }
-  }, [timeoutWinner, playerColor]);
+  }, [timeoutWinner, playerColor, isSpectator]);
 
-  // Show toast when draw is offered - MUST be before any early returns
+  // Show toast when draw is offered - MUST be before any early returns - NOT for spectators
   useEffect(() => {
-    if (drawOfferedByOpponent) {
+    if (drawOfferedByOpponent && !isSpectator) {
       toast.info("Your opponent has offered a draw!", {
         duration: 10000,
       });
     }
-  }, [drawOfferedByOpponent]);
+  }, [drawOfferedByOpponent, isSpectator]);
 
-  // Show toast when someone resigns - MUST be before any early returns
+  // Show toast when someone resigns - MUST be before any early returns - NOT for spectators
   useEffect(() => {
-    if (resignedBy) {
+    if (resignedBy && !isSpectator) {
       const isOpponent = resignedBy !== playerColor;
       if (isOpponent) {
         toast.success("Your opponent resigned! You win!", {
@@ -166,11 +166,11 @@ const Game = () => {
         });
       }
     }
-  }, [resignedBy, playerColor]);
+  }, [resignedBy, playerColor, isSpectator]);
 
-  // Show toast when someone leaves - MUST be before any early returns
+  // Show toast when someone leaves - MUST be before any early returns - NOT for spectators
   useEffect(() => {
-    if (leftBy) {
+    if (leftBy && !isSpectator) {
       const isOpponent = leftBy !== playerColor;
       if (isOpponent) {
         toast.success("Your opponent left the game! You win!", {
@@ -178,7 +178,7 @@ const Game = () => {
         });
       }
     }
-  }, [leftBy, playerColor]);
+  }, [leftBy, playerColor, isSpectator]);
 
   // Wrap createGame to update URL
   const handleCreateGame = async (preferredColor?: "w" | "b" | "random") => {

@@ -19,11 +19,11 @@ export const VictoryAnimation = ({
 
   useEffect(() => {
     if (show && winner) {
-      // Generate MASSIVE amounts of confetti particles spread across the entire screen
-      const particles = Array.from({ length: 120 }, (_, i) => ({
+      // Generate confetti particles spread across the screen
+      const particles = Array.from({ length: 60 }, (_, i) => ({
         id: i,
         x: Math.random() * 100, // Random X position across full width
-        delay: Math.random() * 1.5,
+        delay: Math.random() * 1.2,
       }));
       setConfetti(particles);
     }
@@ -122,7 +122,7 @@ export const VictoryAnimation = ({
 
             {/* Layer 2: EXTRA FAST confetti - rapid fall */}
             <div className="absolute inset-0 overflow-hidden">
-              {Array.from({ length: 70 }, (_, i) => {
+              {Array.from({ length: 35 }, (_, i) => {
                 const startX = Math.random() * 100;
                 const drift = (Math.random() - 0.5) * 50;
                 return (
@@ -161,7 +161,7 @@ export const VictoryAnimation = ({
 
             {/* Layer 3: Glittery small particles - everywhere */}
             <div className="absolute inset-0 overflow-hidden">
-              {Array.from({ length: 100 }, (_, i) => {
+              {Array.from({ length: 50 }, (_, i) => {
                 const startX = Math.random() * 100;
                 const drift = (Math.random() - 0.5) * 30;
                 return (
@@ -196,11 +196,11 @@ export const VictoryAnimation = ({
               })}
             </div>
 
-            {/* Layer 4: Celebratory stars bursting from center - MORE and BIGGER */}
+            {/* Layer 4: Celebratory stars bursting from center */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              {Array.from({ length: 32 }, (_, i) => {
-                const angle = (i * 360 / 32) * Math.PI / 180;
-                const distance = 45 + Math.random() * 20;
+              {Array.from({ length: 20 }, (_, i) => {
+                const angle = (i * 360 / 20) * Math.PI / 180;
+                const distance = 45 + Math.random() * 15;
                 return (
                   <motion.div
                     key={`star-${i}`}
@@ -238,9 +238,9 @@ export const VictoryAnimation = ({
 
             {/* Layer 5: Secondary star wave - delayed burst */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              {Array.from({ length: 24 }, (_, i) => {
-                const angle = (i * 360 / 24 + 15) * Math.PI / 180; // Offset angle
-                const distance = 35 + Math.random() * 15;
+              {Array.from({ length: 16 }, (_, i) => {
+                const angle = (i * 360 / 16 + 15) * Math.PI / 180; // Offset angle
+                const distance = 35 + Math.random() * 12;
                 return (
                   <motion.div
                     key={`star2-${i}`}
@@ -276,19 +276,15 @@ export const VictoryAnimation = ({
               })}
             </div>
 
-            {/* Layer 6: Sparkle explosions from ALL corners and edges */}
+            {/* Layer 6: Sparkle explosions from corners */}
             {[
               { x: "10%", y: "10%" },   // Top-left
               { x: "90%", y: "10%" },   // Top-right
               { x: "10%", y: "90%" },   // Bottom-left
               { x: "90%", y: "90%" },   // Bottom-right
-              { x: "50%", y: "5%" },    // Top center
-              { x: "50%", y: "95%" },   // Bottom center
-              { x: "5%", y: "50%" },    // Left center
-              { x: "95%", y: "50%" },   // Right center
             ].map((pos, idx) => (
               <div key={`corner-${idx}`} className="absolute inset-0">
-                {Array.from({ length: 12 }, (_, i) => (
+                {Array.from({ length: 8 }, (_, i) => (
                   <motion.div
                     key={`sparkle-${idx}-${i}`}
                     initial={{ 
@@ -323,7 +319,7 @@ export const VictoryAnimation = ({
             ))}
 
             {/* Layer 7: Radiating rings */}
-            {Array.from({ length: 5 }, (_, i) => (
+            {Array.from({ length: 3 }, (_, i) => (
               <motion.div
                 key={`ring-${i}`}
                 initial={{
@@ -349,8 +345,8 @@ export const VictoryAnimation = ({
             ))}
 
             {/* Layer 8: Floating sparkles around the card */}
-            {Array.from({ length: 20 }, (_, i) => {
-              const angle = (i * 360 / 20) * Math.PI / 180;
+            {Array.from({ length: 12 }, (_, i) => {
+              const angle = (i * 360 / 12) * Math.PI / 180;
               const radius = 200;
               return (
                 <motion.div

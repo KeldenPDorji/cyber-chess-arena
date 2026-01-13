@@ -14,6 +14,38 @@ export type Database = {
   }
   public: {
     Tables: {
+      chat_messages: {
+        Row: {
+          id: string
+          game_id: string
+          sender_name: string
+          message: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          game_id: string
+          sender_name: string
+          message: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          game_id?: string
+          sender_name?: string
+          message?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "chess_games"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       chess_games: {
         Row: {
           black_player_name: string | null

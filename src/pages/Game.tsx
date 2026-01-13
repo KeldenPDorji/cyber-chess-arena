@@ -11,6 +11,7 @@ import { TimerSettings } from "@/components/chess/TimerSettings";
 import { QuickJoin } from "@/components/chess/QuickJoin";
 import { PromotionDialog } from "@/components/chess/PromotionDialog";
 import { VictoryAnimation } from "@/components/chess/VictoryAnimation";
+import { GameChat } from "@/components/chess/GameChat";
 import { useMultiplayerGame } from "@/hooks/useMultiplayerGame";
 import { Cpu, Zap, Crown, Users } from "lucide-react";
 import { toast } from "sonner";
@@ -628,6 +629,14 @@ const Game = () => {
           "checkmate"
         }
       />
+
+      {/* Game Chat */}
+      {gameState && (
+        <GameChat
+          gameId={gameState.id}
+          playerName={playerName}
+        />
+      )}
     </div>
   );
 };

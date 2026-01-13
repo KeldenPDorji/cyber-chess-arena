@@ -108,6 +108,8 @@ export const GameLobby = ({
             onChange={(e) => onSetPlayerName(e.target.value)}
             placeholder="Enter your name..."
             className="bg-background/50 border-neon-cyan/30 focus:border-neon-cyan font-mono"
+            maxLength={50}
+            minLength={2}
           />
         </div>
 

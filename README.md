@@ -26,12 +26,17 @@
 
 ### 🌐 Multiplayer Experience
 - **Quick Join** - Instantly join open games with one click
+- **Spectator Mode** - Watch live games in real-time without interfering
+- **Real-Time Spectator Count** - See how many people are watching with instant updates
+- **Chat System** - Real-time in-game chat between players with live typing indicators
 - **Game Invitations** - Share game links to invite friends
 - **Copy Link** - One-click game link copying with clipboard API and fallback
 - **Player Tracking** - Real-time player presence and connection status
 
 ### ⚡ Advanced Features
+- **Timer System** - Configurable time controls (1+0, 3+0, 3+2, 5+0, 5+3, 10+0, 15+10, 30+0)
 - **Draw System** - Offer and accept/decline draw proposals with opponent name display
+- **Victory Animations** - Celebratory confetti and dynamic effects when you win
 - **Pawn Promotion** - Interactive dialog to choose promotion piece (Queen, Rook, Bishop, Knight)
 - **Move History** - Complete move log with algebraic notation
 - **Game Status** - Live game state updates (waiting, in progress, completed)
@@ -42,6 +47,14 @@
 - **Modern UI** - Beautiful components built with shadcn/ui and Radix UI
 - **Neon Aesthetic** - Cyberpunk-inspired design with glowing effects
 - **Smooth Animations** - Polished transitions and interactions
+- **Real-Time Updates** - Instant UI updates for spectators and game state changes
+
+### 🔒 Security & Validation
+- **Input Validation** - Comprehensive validation for all user inputs (names, codes, messages)
+- **Row Level Security** - Supabase RLS policies protect all database operations
+- **Spectator Isolation** - Spectators cannot access player-only features (controls, chat)
+- **Rate Limiting Ready** - Architecture supports future rate limiting implementation
+- **Environment Security** - All secrets secured in environment variables
 
 ---
 
@@ -65,6 +78,8 @@
 - **[chess.js](https://github.com/jhlywa/chess.js)** - Chess logic and validation
 - **[Lucide React](https://lucide.dev/)** - Beautiful icon library
 - **[Sonner](https://sonner.emilkowal.ski/)** - Toast notifications
+- **[Framer Motion](https://www.framer.com/motion/)** - Smooth animations and transitions
+- **[canvas-confetti](https://github.com/catdad/canvas-confetti)** - Victory celebration effects
 
 ---
 
@@ -98,10 +113,12 @@
    # Paste and run in Supabase SQL Editor
    ```
    
-   Then run the second migration:
+   Then run the additional migrations:
    ```bash
-   # Copy the contents of supabase/migrations/20260112140000_add_draw_and_timer.sql
-   # Paste and run in Supabase SQL Editor
+   # Copy and run in order:
+   # 1. supabase/migrations/20260112140000_add_draw_and_timer.sql
+   # 2. supabase/migrations/20260113000000_add_chat_messages.sql
+   # 3. supabase/migrations/20260113010000_add_spectators.sql
    ```
 
 4. **Configure environment variables**
@@ -118,8 +135,10 @@
    
    In your Supabase Dashboard:
    - Navigate to Database → Replication
-   - Enable replication for the `games` table
-   - Turn on all events (INSERT, UPDATE, DELETE)
+   - Enable replication for these tables:
+     - `chess_games` (all events: INSERT, UPDATE, DELETE)
+     - `chat_messages` (all events: INSERT, UPDATE, DELETE)
+     - `game_spectators` (all events: INSERT, UPDATE, DELETE)
 
 6. **Start the development server**
    ```bash
@@ -137,28 +156,52 @@
 ### Creating a Game
 
 1. Click **"Create Game"** on the home page
-2. Enter your player name
-3. Share the generated game link with your opponent
-4. Or wait for someone to join via **Quick Join**
+2. Enter your player name (2-50 characters)
+3. Select your preferred time control (optional)
+4. Choose your preferred color (White, Black, or Random)
+5. Share the generated game code or link with your opponent
+6. Or wait for someone to join via **Quick Join**
 
 ### Joining a Game
 
-**Option 1: Game Link**
+**Option 1: Game Code**
+- Enter the 6-character game code
+- Enter your player name
+- Click **"Join"** to start playing
+
+**Option 2: Game Link**
 - Receive a game link from a friend
 - Click the link to automatically join
 
-**Option 2: Quick Join**
+**Option 3: Quick Join**
 - Click **"Quick Join"** on the home page
 - Enter your player name
-- Instantly join an open game
+- Instantly join an available open game
+
+### Spectating a Game
+
+1. Join a game that already has 2 players
+2. Enter your spectator name
+3. Watch the game live with real-time updates
+4. See how many other spectators are watching
+5. Spectators cannot chat or control the game
 
 ### Playing
 
-- **Make Moves** - Click a piece, then click a valid square
+- **Make Moves** - Click a piece, then click a valid square to move
+- **Chat** - Send messages to your opponent in real-time (players only)
 - **Offer Draw** - Click "Offer Draw" button during your turn
 - **Accept/Decline Draw** - Respond to opponent's draw offer
 - **Pawn Promotion** - Select your desired piece when promoting a pawn
 - **View History** - Check the move history panel for all moves
+- **Watch Timer** - Keep an eye on your remaining time (if enabled)
+
+### Victory & Game End
+
+- **Checkmate** - Winner gets celebratory confetti animation 🎉
+- **Draw** - Both players see draw notification
+- **Stalemate** - Game ends in a draw
+- **Time Out** - Lose if your time runs out
 
 ### Game States
 
@@ -180,6 +223,7 @@ cyber-chess-arena/
 │   │   │   ├── ChessBoard.tsx
 │   │   │   ├── ChessPiece.tsx
 │   │   │   ├── ChessSquare.tsx
+│   │   │   ├── GameChat.tsx
 │   │   │   ├── GameControls.tsx
 │   │   │   ├── GameLobby.tsx
 │   │   │   ├── GameStatus.tsx
@@ -187,7 +231,9 @@ cyber-chess-arena/
 │   │   │   ├── PlayerInfo.tsx
 │   │   │   ├── PromotionDialog.tsx
 │   │   │   ├── QuickJoin.tsx
-│   │   │   └── TimerSettings.tsx
+│   │   │   ├── SpectatorIndicator.tsx
+│   │   │   ├── TimerSettings.tsx
+│   │   │   └── VictoryAnimation.tsx
 │   │   ├── ui/              # Reusable UI components
 │   │   └── NavLink.tsx
 │   ├── hooks/
@@ -200,8 +246,9 @@ cyber-chess-arena/
 │   │   ├── Game.tsx         # Game page
 │   │   ├── Index.tsx        # Home page
 │   │   └── NotFound.tsx
-│   └── lib/
-│       └── utils.ts         # Utility functions
+│   ├── lib/
+│   │   ├── devLog.ts        # Development logging utility
+│   │   └── utils.ts         # Utility functions
 ├── supabase/
 │   ├── migrations/          # Database migrations
 │   └── config.toml
@@ -228,45 +275,76 @@ Handles chess game logic and validation:
 
 ### Database Schema
 
-**games** table:
+**chess_games** table:
 ```sql
-- id (uuid)
-- game_code (text) - Unique 6-character code
+- id (uuid, primary key)
+- game_code (text, unique) - 6-character game code
 - player_white_name (text)
 - player_black_name (text)
 - current_turn (text) - 'w' or 'b'
-- fen (text) - Board state
+- fen (text) - Board state in FEN notation
 - status (text) - 'waiting' | 'in_progress' | 'completed'
 - winner (text) - 'white' | 'black' | 'draw' | null
-- move_history (jsonb)
+- move_history (jsonb) - Array of moves
 - draw_offered_by (text) - 'white' | 'black' | null
+- white_time_left (integer) - Seconds remaining for white
+- black_time_left (integer) - Seconds remaining for black
+- time_control_minutes (integer) - Initial time in minutes
+- time_control_increment (integer) - Increment in seconds
 - created_at (timestamp)
 - last_move_at (timestamp)
+```
+
+**chat_messages** table:
+```sql
+- id (uuid, primary key)
+- game_id (uuid, foreign key → chess_games.id)
+- player_color (text) - 'white' | 'black'
+- player_name (text)
+- message (text, max 500 characters)
+- created_at (timestamp)
+```
+
+**game_spectators** table:
+```sql
+- id (uuid, primary key)
+- game_id (uuid, foreign key → chess_games.id)
+- spectator_name (text)
+- joined_at (timestamp)
+- last_seen_at (timestamp)
 ```
 
 ---
 
 ## 🔐 Security
 
-- **Environment Variables** - Sensitive keys stored in `.env` (never committed)
-- **Row Level Security** - Supabase RLS policies for data protection
-- **Client-Side Validation** - Move validation prevents illegal moves
-- **Realtime Security** - Supabase authentication for WebSocket connections
+- **Environment Variables** - All sensitive keys stored in `.env` (never committed to git)
+- **Row Level Security (RLS)** - Comprehensive Supabase RLS policies on all tables:
+  - `chess_games` - Public read, controlled write
+  - `chat_messages` - Players can only insert their own messages
+  - `game_spectators` - Public read for spectator counts
+- **Input Validation** - All user inputs validated (names: 2-50 chars, messages: max 500 chars, codes: 6 chars)
+- **Client-Side Validation** - Move validation prevents illegal chess moves
+- **Spectator Isolation** - Spectators cannot access player-only features (chat, controls, toasts)
+- **Real-time Security** - Supabase authentication for WebSocket connections
+- **Development Logging** - All console logs disabled in production via `devLog` utility
 
 ---
 
 ## 🎯 Future Enhancements
 
-- [ ] Timer/Clock system for timed games
-- [ ] ELO rating system
-- [ ] Player profiles and statistics
-- [ ] Chat system during games
-- [ ] Game replay functionality
-- [ ] Tournament mode
-- [ ] AI opponent option
+- [ ] ELO rating system and leaderboards
+- [ ] Player profiles and game statistics
+- [ ] Tournament mode with brackets
+- [ ] AI opponent with difficulty levels
+- [ ] Game replay and analysis features
+- [ ] Custom board themes and piece sets
 - [ ] Mobile app (React Native)
-- [ ] Game analysis and hints
-- [ ] Custom board themes
+- [ ] Profanity filter for chat
+- [ ] Rate limiting for API requests
+- [ ] Email notifications for game invites
+- [ ] Puzzle mode for training
+- [ ] Opening book and move suggestions
 
 ---
 

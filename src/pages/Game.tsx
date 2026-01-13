@@ -12,8 +12,9 @@ import { QuickJoin } from "@/components/chess/QuickJoin";
 import { PromotionDialog } from "@/components/chess/PromotionDialog";
 import { VictoryAnimation } from "@/components/chess/VictoryAnimation";
 import { GameChat } from "@/components/chess/GameChat";
+import { SpectatorIndicator } from "@/components/chess/SpectatorIndicator";
 import { useMultiplayerGame } from "@/hooks/useMultiplayerGame";
-import { Cpu, Zap, Crown, Users } from "lucide-react";
+import { Cpu, Zap, Crown, Users, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { devLog } from "@/lib/devLog";
@@ -53,6 +54,9 @@ const Game = () => {
     error,
     createGame,
     joinGame,
+    joinAsSpectator,
+    leaveAsSpectator,
+    isSpectator,
     handleSquareClick,
     handlePromotion,
     pendingPromotion,
@@ -85,6 +89,12 @@ const Game = () => {
       localStorage.setItem("last_game_code", gameCodeFromUrl);
     }
   }, [playerName, playerColor, gameCodeFromUrl]);
+
+  // Auto-join as spectator is now handled in QuickJoin component
+  // This effect is disabled to prevent auto-joining without user input
+  useEffect(() => {
+    // Intentionally empty - spectator join now requires explicit user action via QuickJoin
+  }, []);
 
   // Calculate derived values that need to be available for hooks
   const isMyTurn = playerColor === turn;
@@ -239,9 +249,9 @@ const Game = () => {
 
   // Show QuickJoin ONLY if:
   // 1. Game code in URL
-  // 2. This is a new invite link (different from last game)
-  // 3. User is not already a player in this game (no playerColor assigned yet)
-  if (gameCodeFromUrl && isNewInvite && !playerColor) {
+  // 2. This is a new invite link (different from last game) OR no player name set
+  // 3. User is not already a player in this game (no playerColor assigned yet) AND not a spectator
+  if (gameCodeFromUrl && (isNewInvite || !playerName) && !playerColor && !isSpectator) {
     devLog.log("✅ Showing QuickJoin for NEW invite:", gameCodeFromUrl);
     return (
       <QuickJoin
@@ -250,11 +260,26 @@ const Game = () => {
           devLog.log("QuickJoin: User clicked join with name:", name);
           setPlayerName(name);
           setIsNewInvite(false);
-          // Join the game with the provided name
-          const success = await joinGame(gameCodeFromUrl, name);
-          devLog.log("Join result:", success);
-          if (!success) {
-            toast.error("Failed to join game");
+          
+          // Check if game is active - if so, join as spectator
+          if (gameState?.status === "active") {
+            devLog.log("Game is active, joining as spectator");
+            const success = await joinAsSpectator(name);
+            if (success) {
+              toast.success(`Watching as spectator: ${name}`, {
+                icon: "👁️",
+                duration: 3000,
+              });
+            } else {
+              toast.error("Failed to join as spectator");
+            }
+          } else {
+            // Join as player
+            const success = await joinGame(gameCodeFromUrl, name);
+            devLog.log("Join result:", success);
+            if (!success) {
+              toast.error("Failed to join game");
+            }
           }
         }}
         loading={loading}
@@ -476,12 +501,20 @@ const Game = () => {
             <Users className="w-3 h-3 sm:w-4 sm:h-4" />
             Game: {gameState.game_code}
           </span>
-          {playerColor && (
+          {playerColor && !isSpectator && (
             <span className="flex items-center gap-1">
               <Crown className="w-3 h-3 sm:w-4 sm:h-4" />
               You are {playerColor === "w" ? "White" : "Black"}
             </span>
           )}
+          {isSpectator && (
+            <span className="flex items-center gap-1 text-neon-purple">
+              <Eye className="w-3 h-3 sm:w-4 sm:h-4 animate-pulse" />
+              Spectator Mode
+            </span>
+          )}
+          {/* Spectator count indicator */}
+          <SpectatorIndicator gameId={gameState.id} />
         </div>
       </motion.header>
 
@@ -552,7 +585,7 @@ const Game = () => {
               selectedSquare={selectedSquare}
               validMoves={validMoves}
               lastMove={lastMove}
-              onSquareClick={handleSquareClick}
+              onSquareClick={isSpectator ? () => {} : handleSquareClick}
               flipped={playerColor === "b"}
               kingInCheckSquare={kingInCheckSquare}
             />
@@ -588,15 +621,35 @@ const Game = () => {
           </div>
           
           <MoveHistory moves={moveHistory} />
-          <GameControls
-            onNewGame={handleNewGame}
-            onResign={handleResign}
-            onOfferDraw={handleOfferDraw}
-            onAcceptDraw={drawOfferedByOpponent ? handleAcceptDraw : undefined}
-            onDeclineDraw={drawOfferedByOpponent ? handleDeclineDraw : undefined}
-            gameOver={gameOver}
-            drawOffered={drawOfferedByOpponent}
-          />
+          
+          {/* Show controls for players only, not spectators */}
+          {!isSpectator ? (
+            <GameControls
+              onNewGame={handleNewGame}
+              onResign={handleResign}
+              onOfferDraw={handleOfferDraw}
+              onAcceptDraw={drawOfferedByOpponent ? handleAcceptDraw : undefined}
+              onDeclineDraw={drawOfferedByOpponent ? handleDeclineDraw : undefined}
+              gameOver={gameOver}
+              drawOffered={drawOfferedByOpponent}
+            />
+          ) : (
+            <div className="cyber-card p-4 space-y-3">
+              <p className="text-center text-sm text-neon-purple font-cyber">
+                👁️ Spectator Mode
+              </p>
+              <Button
+                onClick={async () => {
+                  await leaveAsSpectator();
+                  window.location.href = "/";
+                }}
+                variant="outline"
+                className="w-full"
+              >
+                Leave Game
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -630,8 +683,8 @@ const Game = () => {
         }
       />
 
-      {/* Game Chat */}
-      {gameState && (
+      {/* Game Chat - only show for players, not spectators */}
+      {gameState && !isSpectator && (
         <GameChat
           gameId={gameState.id}
           playerName={playerName}

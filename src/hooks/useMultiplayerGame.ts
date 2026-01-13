@@ -20,7 +20,7 @@ interface GameState {
   time_increment?: number;
 }
 
-export const useMultiplayerGame = (gameCode: string | null, playerName: string) => {
+export const useMultiplayerGame = (gameCode: string | null, playerName: string, isSpectator: boolean = false) => {
   const [game, setGame] = useState(() => new Chess());
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
@@ -31,7 +31,9 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
   const [error, setError] = useState<string | null>(null);
   const [timeControl, setTimeControl] = useState({ minutes: 10, increment: 0 });
   const [pendingPromotion, setPendingPromotion] = useState<{ from: Square; to: Square } | null>(null);
+  const [spectatorId, setSpectatorId] = useState<string | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
 
   // Initial load: fetch game if gameCode provided (for QuickJoin and spectators)
   useEffect(() => {
@@ -708,6 +710,90 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
     }
   }, [pendingPromotion, gameState, game, playerColor]);
 
+  // Join as spectator
+  const joinAsSpectator = useCallback(async (spectatorName: string) => {
+    if (!gameState?.id) return false;
+
+    devLog.log("👁️ Joining as spectator:", spectatorName);
+
+    const { data, error } = await supabase
+      .from("game_spectators")
+      .insert({
+        game_id: gameState.id,
+        spectator_name: spectatorName,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      devLog.error("Failed to join as spectator:", error);
+      return false;
+    }
+
+    setSpectatorId(data.id);
+    devLog.log("✅ Joined as spectator with ID:", data.id);
+    return true;
+  }, [gameState]);
+
+  // Leave as spectator
+  const leaveAsSpectator = useCallback(async () => {
+    if (!spectatorId) return;
+
+    devLog.log("👁️ Leaving as spectator:", spectatorId);
+
+    const { error } = await supabase
+      .from("game_spectators")
+      .delete()
+      .eq("id", spectatorId);
+
+    if (error) {
+      devLog.error("Failed to leave as spectator:", error);
+      return;
+    }
+
+    setSpectatorId(null);
+    devLog.log("✅ Left as spectator");
+  }, [spectatorId]);
+
+  // Spectator heartbeat to show active presence
+  useEffect(() => {
+    if (!spectatorId) return;
+
+    const sendHeartbeat = async () => {
+      const { error } = await supabase
+        .from("game_spectators")
+        .update({ last_heartbeat: new Date().toISOString() })
+        .eq("id", spectatorId);
+
+      if (error) {
+        devLog.error("Failed to send spectator heartbeat:", error);
+      }
+    };
+
+    // Send heartbeat every 15 seconds
+    heartbeatRef.current = setInterval(sendHeartbeat, 15000);
+
+    return () => {
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current);
+      }
+    };
+  }, [spectatorId]);
+
+  // Cleanup spectator on unmount
+  useEffect(() => {
+    return () => {
+      if (spectatorId) {
+        // Cleanup spectator record on unmount
+        supabase
+          .from("game_spectators")
+          .delete()
+          .eq("id", spectatorId)
+          .then(() => devLog.log("✅ Spectator cleaned up on unmount"));
+      }
+    };
+  }, [spectatorId]);
+
   const kingInCheckSquare = game.isCheck() ? getKingSquare(game, game.turn()) : null;
 
   return {
@@ -742,5 +828,8 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
     leftBy,
     timeoutWinner,
     kingInCheckSquare,
+    joinAsSpectator,
+    leaveAsSpectator,
+    isSpectator: spectatorId !== null,
   };
 };

@@ -50,6 +50,7 @@ export const QuickJoin = ({ gameCode, onJoin, loading }: QuickJoinProps) => {
 
   // Determine which color is available and who is the host
   const hostName = gameInfo?.white_player_name || gameInfo?.black_player_name;
+  const bothSlotsTaken = gameInfo?.white_player_name && gameInfo?.black_player_name;
   const yourColor = gameInfo?.white_player_name ? "Black" : "White";
   const yourColorCode = yourColor === "White" ? "w" : "b";
   
@@ -75,16 +76,135 @@ export const QuickJoin = ({ gameCode, onJoin, loading }: QuickJoinProps) => {
     );
   }
 
-  if (!gameInfo || gameInfo.status !== "waiting") {
+  // If game is active, show spectator join option
+  if (gameInfo && gameInfo.status === "active") {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3 }}
+          className="w-full max-w-lg"
+        >
+          <Card className="cyber-card border-neon-purple/30">
+            <CardHeader className="text-center space-y-4">
+              <motion.div
+                initial={{ y: -20 }}
+                animate={{ y: 0 }}
+                className="flex items-center justify-center gap-3"
+              >
+                <Users className="w-8 h-8 text-neon-purple animate-pulse" />
+                <CardTitle className="font-cyber text-3xl bg-gradient-to-r from-neon-purple to-neon-magenta bg-clip-text text-transparent">
+                  Watch Game
+                </CardTitle>
+                <Users className="w-8 h-8 text-neon-magenta animate-pulse" />
+              </motion.div>
+              
+              <CardDescription className="text-base">
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  <Swords className="w-5 h-5 text-neon-cyan" />
+                  <span className="font-mono">Game Code: <span className="text-neon-cyan font-bold">{gameCode}</span></span>
+                </div>
+                <p className="text-neon-purple">This game is in progress. Join as a spectator!</p>
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="space-y-6">
+              {/* Game Details */}
+              <div className="cyber-card bg-card/50 p-4 rounded-lg space-y-3">
+                <h3 className="font-cyber text-lg text-neon-purple mb-3 text-center">Match in Progress</h3>
+                
+                {/* Players */}
+                <div className="flex items-center justify-between p-3 bg-background/50 rounded">
+                  <div className="flex items-center gap-2">
+                    <Crown className="w-5 h-5 text-white" />
+                    <span className="text-sm text-muted-foreground">White</span>
+                  </div>
+                  <span className="font-cyber text-white">{gameInfo.white_player_name || "Player"}</span>
+                </div>
+
+                <div className="flex items-center justify-between p-3 bg-background/50 rounded">
+                  <div className="flex items-center gap-2">
+                    <Crown className="w-5 h-5 text-gray-600" />
+                    <span className="text-sm text-muted-foreground">Black</span>
+                  </div>
+                  <span className="font-cyber text-gray-300">{gameInfo.black_player_name || "Player"}</span>
+                </div>
+              </div>
+
+              {/* Name Input for Spectator */}
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="spectatorName" className="text-sm font-medium flex items-center gap-2">
+                    <UserCircle className="w-4 h-4 text-neon-purple" />
+                    Enter Your Name to Watch
+                  </label>
+                  <Input
+                    id="spectatorName"
+                    type="text"
+                    placeholder="Your Name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="cyber-input text-lg"
+                    minLength={2}
+                    maxLength={20}
+                    required
+                    autoFocus
+                    disabled={loading}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    You'll be able to watch the game but not interact
+                  </p>
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full cyber-button text-lg py-6"
+                  disabled={loading || name.trim().length < 2}
+                >
+                  {loading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Joining...
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Users className="w-5 h-5" />
+                      Join as Spectator
+                    </div>
+                  )}
+                </Button>
+              </form>
+
+              <div className="text-center text-xs text-muted-foreground">
+                <p>As a spectator, you can view the game in real-time</p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // If game is finished or doesn't exist
+  if (!gameInfo || (gameInfo.status !== "waiting" && gameInfo.status !== "active")) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="cyber-card border-destructive/30 max-w-md">
           <CardHeader className="text-center">
             <CardTitle className="font-cyber text-2xl text-destructive">Game Not Available</CardTitle>
             <CardDescription>
-              This game is no longer available or has already started.
+              This game is no longer available.
             </CardDescription>
           </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={() => window.location.href = "/"} 
+              className="w-full cyber-button font-cyber"
+            >
+              Back to Lobby
+            </Button>
+          </CardContent>
         </Card>
       </div>
     );

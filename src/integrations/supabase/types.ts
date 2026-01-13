@@ -46,6 +46,38 @@ export type Database = {
           }
         ]
       }
+      game_spectators: {
+        Row: {
+          id: string
+          game_id: string
+          spectator_name: string
+          joined_at: string
+          last_heartbeat: string
+        }
+        Insert: {
+          id?: string
+          game_id: string
+          spectator_name: string
+          joined_at?: string
+          last_heartbeat?: string
+        }
+        Update: {
+          id?: string
+          game_id?: string
+          spectator_name?: string
+          joined_at?: string
+          last_heartbeat?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_spectators_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "chess_games"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       chess_games: {
         Row: {
           black_player_name: string | null

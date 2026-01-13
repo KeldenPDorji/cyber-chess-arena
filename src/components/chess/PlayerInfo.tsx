@@ -1,5 +1,6 @@
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Clock, User } from "lucide-react";
+import { useState, useEffect } from "react";
 
 interface PlayerInfoProps {
   name: string;
@@ -24,6 +25,23 @@ export const PlayerInfo = ({
   isWhite,
   capturedPieces,
 }: PlayerInfoProps) => {
+  const [prevTime, setPrevTime] = useState(time);
+  const [showIncrement, setShowIncrement] = useState(false);
+  
+  // Detect time increment
+  useEffect(() => {
+    if (time > prevTime && prevTime > 0) {
+      const increment = time - prevTime;
+      if (increment > 1 && increment < 30) {
+        setShowIncrement(true);
+        setTimeout(() => setShowIncrement(false), 1000);
+      }
+    }
+    setPrevTime(time);
+  }, [time, prevTime]);
+
+  const isLowTime = time <= 30 && time > 0;
+  const isCriticalTime = time <= 10 && time > 0;
   return (
     <motion.div
       initial={{ opacity: 0, x: isWhite ? -20 : 20 }}
@@ -69,15 +87,36 @@ export const PlayerInfo = ({
         </div>
 
         {/* Timer */}
-        <div
-          className={`
-            flex items-center gap-2 px-4 py-2 rounded-lg font-mono text-xl
-            ${isWhite ? "bg-neon-cyan/10 text-neon-cyan" : "bg-neon-magenta/10 text-neon-magenta"}
-            ${isActive ? "animate-pulse" : ""}
-          `}
-        >
-          <Clock className="w-5 h-5" />
-          <span className={isActive ? "text-glow-cyan" : ""}>{formatTime(time)}</span>
+        <div className="relative">
+          <div
+            className={`
+              flex items-center gap-2 px-4 py-2 rounded-lg font-mono text-xl
+              transition-all duration-300
+              ${isWhite ? "bg-neon-cyan/10 text-neon-cyan" : "bg-neon-magenta/10 text-neon-magenta"}
+              ${isLowTime && isActive ? "bg-orange-500/20 text-orange-400 ring-1 ring-orange-400/50" : ""}
+              ${isCriticalTime && isActive ? "bg-red-500/30 text-red-400 ring-2 ring-red-400/70" : ""}
+            `}
+          >
+            <Clock className="w-5 h-5" />
+            <span className={isLowTime && isActive ? "font-bold" : ""}>
+              {formatTime(time)}
+            </span>
+          </div>
+          
+          {/* Increment notification - subtle */}
+          <AnimatePresence>
+            {showIncrement && (
+              <motion.div
+                initial={{ opacity: 0, y: 0, scale: 0.8 }}
+                animate={{ opacity: 1, y: -15, scale: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="absolute -top-6 right-0 bg-green-500/90 text-white px-2 py-0.5 rounded text-xs font-bold shadow-lg"
+              >
+                +{time - prevTime}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </motion.div>

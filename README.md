@@ -395,8 +395,6 @@ snyk test --severity-threshold=high
 snyk test --json > security-report.json
 ```
 
-For complete security documentation, see [SNYK-SETUP-GUIDE.md](./SNYK-SETUP-GUIDE.md)
-
 ---
 
 ## 🎯 Future Enhancements

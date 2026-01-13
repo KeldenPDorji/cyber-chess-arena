@@ -7,6 +7,7 @@ interface VictoryAnimationProps {
   winner: "w" | "b" | null;
   playerColor: "w" | "b" | null;
   reason?: "checkmate" | "resignation" | "timeout" | "abandoned" | "draw";
+  isSpectator?: boolean;
 }
 
 export const VictoryAnimation = ({
@@ -14,20 +15,21 @@ export const VictoryAnimation = ({
   winner,
   playerColor,
   reason = "checkmate",
+  isSpectator = false,
 }: VictoryAnimationProps) => {
   const [confetti, setConfetti] = useState<Array<{ id: number; x: number; delay: number }>>([]);
 
   useEffect(() => {
-    if (show && winner) {
-      // Generate confetti particles spread across the screen
+    if (show && winner && !isSpectator) {
+      // Only generate confetti for players, not spectators
       const particles = Array.from({ length: 60 }, (_, i) => ({
         id: i,
-        x: Math.random() * 100, // Random X position across full width
+        x: Math.random() * 100,
         delay: Math.random() * 1.2,
       }));
       setConfetti(particles);
     }
-  }, [show, winner]);
+  }, [show, winner, isSpectator]);
 
   const isVictory = winner === playerColor;
   const isDraw = reason === "draw";
@@ -36,6 +38,24 @@ export const VictoryAnimation = ({
     if (isDraw) return "Draw!";
     if (!winner) return "";
     
+    // Spectator view - simple factual message
+    if (isSpectator) {
+      const winnerColor = winner === "w" ? "White" : "Black";
+      switch (reason) {
+        case "checkmate":
+          return `${winnerColor} Wins by Checkmate`;
+        case "resignation":
+          return `${winnerColor} Wins by Resignation`;
+        case "timeout":
+          return `${winnerColor} Wins on Time`;
+        case "abandoned":
+          return `${winnerColor} Wins - Opponent Left`;
+        default:
+          return `${winnerColor} Wins`;
+      }
+    }
+    
+    // Player view - personalized message
     if (isVictory) {
       switch (reason) {
         case "checkmate":
@@ -75,8 +95,8 @@ export const VictoryAnimation = ({
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
       >
-        {/* ALL THE CONFETTI AND EFFECTS for victory */}
-        {isVictory && !isDraw && (
+        {/* ALL THE CONFETTI AND EFFECTS for victory - ONLY FOR PLAYERS */}
+        {isVictory && !isDraw && !isSpectator && (
           <>
             {/* Layer 1: Main BIG confetti - wild horizontal spread */}
             <div className="absolute inset-0 overflow-hidden">
@@ -387,13 +407,14 @@ export const VictoryAnimation = ({
           transition={{ type: "spring", duration: 0.6, bounce: 0.5 }}
           className={`
             relative cyber-card rounded-2xl p-8 max-w-md mx-4
-            ${isVictory && !isDraw ? "border-glow-cyan bg-gradient-to-br from-cyan-500/10 to-purple-500/10" : ""}
-            ${!isVictory && !isDraw ? "bg-gradient-to-br from-red-500/10 to-gray-800/50" : ""}
+            ${isSpectator ? "border-neon-purple/50 bg-gradient-to-br from-purple-500/10 to-gray-800/50" : ""}
+            ${!isSpectator && isVictory && !isDraw ? "border-glow-cyan bg-gradient-to-br from-cyan-500/10 to-purple-500/10" : ""}
+            ${!isSpectator && !isVictory && !isDraw ? "bg-gradient-to-br from-red-500/10 to-gray-800/50" : ""}
             ${isDraw ? "bg-gradient-to-br from-yellow-500/10 to-orange-500/10" : ""}
           `}
         >
-          {/* Sparkles animation for victory */}
-          {isVictory && !isDraw && (
+          {/* Sparkles animation for victory - NOT for spectators */}
+          {isVictory && !isDraw && !isSpectator && (
             <>
               <motion.div
                 animate={{
@@ -428,7 +449,7 @@ export const VictoryAnimation = ({
 
           {/* Icon */}
           <motion.div
-            animate={isVictory && !isDraw ? { rotate: [0, -10, 10, -10, 0] } : {}}
+            animate={isVictory && !isDraw && !isSpectator ? { rotate: [0, -10, 10, -10, 0] } : {}}
             transition={{
               duration: 0.5,
               repeat: Infinity,
@@ -436,14 +457,20 @@ export const VictoryAnimation = ({
             }}
             className="flex justify-center mb-4"
           >
-            {isVictory && !isDraw && (
-              <Crown className="w-20 h-20 text-yellow-400 drop-shadow-[0_0_20px_rgba(250,204,21,0.8)]" />
-            )}
-            {!isVictory && !isDraw && (
-              <Trophy className="w-20 h-20 text-gray-400" />
-            )}
-            {isDraw && (
-              <Zap className="w-20 h-20 text-yellow-400" />
+            {isSpectator ? (
+              <Trophy className="w-20 h-20 text-purple-400" />
+            ) : (
+              <>
+                {isVictory && !isDraw && (
+                  <Crown className="w-20 h-20 text-yellow-400 drop-shadow-[0_0_20px_rgba(250,204,21,0.8)]" />
+                )}
+                {!isVictory && !isDraw && (
+                  <Trophy className="w-20 h-20 text-gray-400" />
+                )}
+                {isDraw && (
+                  <Zap className="w-20 h-20 text-yellow-400" />
+                )}
+              </>
             )}
           </motion.div>
 
@@ -454,8 +481,9 @@ export const VictoryAnimation = ({
             transition={{ delay: 0.3 }}
             className={`
               text-3xl md:text-4xl font-cyber text-center mb-4
-              ${isVictory && !isDraw ? "text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400" : ""}
-              ${!isVictory && !isDraw ? "text-red-400" : ""}
+              ${isSpectator ? "text-purple-400" : ""}
+              ${!isSpectator && isVictory && !isDraw ? "text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400" : ""}
+              ${!isSpectator && !isVictory && !isDraw ? "text-red-400" : ""}
               ${isDraw ? "text-yellow-400" : ""}
             `}
           >
@@ -469,13 +497,14 @@ export const VictoryAnimation = ({
             transition={{ delay: 0.5 }}
             className="text-center text-muted-foreground"
           >
-            {isVictory && !isDraw && "Congratulations! 🎊"}
-            {!isVictory && !isDraw && "Better luck next time!"}
+            {isSpectator && "Game Over"}
+            {!isSpectator && isVictory && !isDraw && "Congratulations! 🎊"}
+            {!isSpectator && !isVictory && !isDraw && "Better luck next time!"}
             {isDraw && "Well played!"}
           </motion.p>
 
-          {/* Glow effect for victory */}
-          {isVictory && !isDraw && (
+          {/* Glow effect for victory - NOT for spectators */}
+          {isVictory && !isDraw && !isSpectator && (
             <motion.div
               animate={{
                 opacity: [0.5, 1, 0.5],

@@ -26,19 +26,21 @@ export const SpectatorIndicator = ({ gameId }: SpectatorIndicatorProps) => {
       const { data, error } = await supabase
         .from("game_spectators")
         .select("*")
-        .eq("game_id", gameId);
+        .eq("game_id", gameId)
+        .order("joined_at", { ascending: true });
 
       if (error) {
         devLog.error("Error fetching spectators:", error);
         return;
       }
 
+      devLog.log("👁️ Initial spectators loaded:", data?.length || 0);
       setSpectators(data || []);
     };
 
     fetchSpectators();
 
-    // Subscribe to spectator changes
+    // Subscribe to spectator changes with immediate updates
     const channel = supabase
       .channel(`spectators:${gameId}`)
       .on(
@@ -50,23 +52,46 @@ export const SpectatorIndicator = ({ gameId }: SpectatorIndicatorProps) => {
           filter: `game_id=eq.${gameId}`,
         },
         (payload) => {
-          devLog.log("👁️ Spectator change:", payload);
+          devLog.log("👁️ Spectator change detected:", payload.eventType);
           
           if (payload.eventType === "INSERT") {
-            setSpectators((prev) => [...prev, payload.new as Spectator]);
+            const newSpectator = payload.new as Spectator;
+            setSpectators((prev) => {
+              // Prevent duplicates
+              if (prev.some(s => s.id === newSpectator.id)) {
+                return prev;
+              }
+              devLog.log("👁️ Spectator joined:", newSpectator.spectator_name);
+              return [...prev, newSpectator];
+            });
           } else if (payload.eventType === "DELETE") {
-            setSpectators((prev) => prev.filter((s) => s.id !== payload.old.id));
+            const deletedId = payload.old.id;
+            setSpectators((prev) => {
+              const filtered = prev.filter((s) => s.id !== deletedId);
+              devLog.log("👁️ Spectator left, remaining:", filtered.length);
+              return filtered;
+            });
           } else if (payload.eventType === "UPDATE") {
+            // Update heartbeat timestamp
             setSpectators((prev) =>
               prev.map((s) => (s.id === payload.new.id ? (payload.new as Spectator) : s))
             );
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        devLog.log("👁️ Spectator subscription status:", status);
+      });
+
+    // Periodic refresh to ensure accuracy (every 30 seconds)
+    const refreshInterval = setInterval(() => {
+      fetchSpectators();
+    }, 30000);
 
     return () => {
+      clearInterval(refreshInterval);
       supabase.removeChannel(channel);
+      devLog.log("👁️ Spectator tracking cleaned up");
     };
   }, [gameId]);
 

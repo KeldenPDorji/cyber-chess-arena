@@ -681,6 +681,7 @@ const Game = () => {
           leftBy ? "abandoned" :
           "checkmate"
         }
+        isSpectator={isSpectator}
       />
 
       {/* Game Chat - only show for players, not spectators */}

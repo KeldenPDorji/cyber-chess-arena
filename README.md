@@ -9,8 +9,9 @@
 [![Vite](https://img.shields.io/badge/Vite-6.0-646cff?logo=vite)](https://vitejs.dev/)
 [![Supabase](https://img.shields.io/badge/Supabase-Realtime-3ecf8e?logo=supabase)](https://supabase.com/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.0-38bdf8?logo=tailwindcss)](https://tailwindcss.com/)
+[![Snyk Security](https://img.shields.io/badge/Snyk-Protected-4c4a73?logo=snyk)](https://snyk.io/)
 
-[Features](#-features) • [Tech Stack](#-tech-stack) • [Getting Started](#-getting-started) • [Usage](#-usage) • [Architecture](#-architecture)
+[Features](#-features) • [Tech Stack](#-tech-stack) • [Getting Started](#-getting-started) • [Scripts](#-available-scripts) • [Usage](#-usage) • [Architecture](#-architecture) • [Security](#-security)
 
 </div>
 
@@ -55,6 +56,8 @@
 - **Spectator Isolation** - Spectators cannot access player-only features (controls, chat)
 - **Rate Limiting Ready** - Architecture supports future rate limiting implementation
 - **Environment Security** - All secrets secured in environment variables
+- **Snyk Security Scanning** - Continuous monitoring for vulnerabilities with zero known issues
+- **Dependency Protection** - Automated vulnerability detection and fixes
 
 ---
 
@@ -80,6 +83,10 @@
 - **[Sonner](https://sonner.emilkowal.ski/)** - Toast notifications
 - **[Framer Motion](https://www.framer.com/motion/)** - Smooth animations and transitions
 - **[canvas-confetti](https://github.com/catdad/canvas-confetti)** - Victory celebration effects
+
+### Security & Monitoring
+- **[Snyk](https://snyk.io/)** - Vulnerability scanning and dependency monitoring
+- **GitHub Security** - Automated security advisories
 
 ---
 
@@ -148,6 +155,43 @@
 7. **Open your browser**
    
    Navigate to `http://localhost:5173`
+
+### 🛡️ Security Setup (Optional but Recommended)
+
+**Snyk Security Scanning** is already configured! Run vulnerability scans anytime:
+
+```bash
+# Test for vulnerabilities
+npm run snyk:test
+
+# Monitor project on Snyk dashboard
+npm run snyk:monitor
+
+# Interactive fix wizard
+npm run snyk:wizard
+```
+
+**Note:** Snyk requires authentication. Run `snyk auth` if you haven't already.
+
+---
+
+## 📦 Available Scripts
+
+### Development
+```bash
+npm run dev          # Start development server on http://localhost:5173
+npm run build        # Build for production
+npm run build:dev    # Build in development mode
+npm run preview      # Preview production build locally
+npm run lint         # Run ESLint to check code quality
+```
+
+### Security
+```bash
+npm run snyk:test    # Scan for security vulnerabilities
+npm run snyk:monitor # Upload snapshot to Snyk dashboard
+npm run snyk:wizard  # Interactive security fix wizard
+```
 
 ---
 
@@ -318,6 +362,7 @@ Handles chess game logic and validation:
 
 ## 🔐 Security
 
+### Application Security
 - **Environment Variables** - All sensitive keys stored in `.env` (never committed to git)
 - **Row Level Security (RLS)** - Comprehensive Supabase RLS policies on all tables:
   - `chess_games` - Public read, controlled write
@@ -328,6 +373,29 @@ Handles chess game logic and validation:
 - **Spectator Isolation** - Spectators cannot access player-only features (chat, controls, toasts)
 - **Real-time Security** - Supabase authentication for WebSocket connections
 - **Development Logging** - All console logs disabled in production via `devLog` utility
+
+### Dependency Security
+- **Snyk Monitoring** - Continuous vulnerability scanning of all dependencies
+- **Automated Alerts** - Email notifications for new security issues
+- **Zero Known Vulnerabilities** - All dependencies regularly updated and tested
+- **Security Dashboard** - [View project security status](https://app.snyk.io/org/keldenpdorji/projects)
+
+### Security Scanning
+
+Run security checks before deploying:
+
+```bash
+# Scan for vulnerabilities
+npm run snyk:test
+
+# Check specific packages
+snyk test --severity-threshold=high
+
+# Generate security report
+snyk test --json > security-report.json
+```
+
+For complete security documentation, see [SNYK-SETUP-GUIDE.md](./SNYK-SETUP-GUIDE.md)
 
 ---
 
@@ -357,6 +425,13 @@ Contributions are welcome! Please follow these steps:
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+### Development Guidelines
+
+- **Code Quality** - Follow TypeScript best practices
+- **Security** - Run `npm run snyk:test` before submitting PRs
+- **Testing** - Ensure all features work as expected
+- **Documentation** - Update README for new features
 
 ---
 

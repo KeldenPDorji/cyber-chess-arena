@@ -27,6 +27,7 @@ const Index = () => {
     isDraw,
     turn,
     winner,
+    kingInCheckSquare,
   } = useChessGame(600);
 
   return (
@@ -56,7 +57,7 @@ const Index = () => {
         <div className="space-y-4 order-2 lg:order-1">
           <PlayerInfo
             name="Player 2"
-            rating={1500}
+            rating={1200}
             time={blackTime}
             isActive={turn === "b" && !gameOver}
             isWhite={false}
@@ -73,7 +74,7 @@ const Index = () => {
 
           <PlayerInfo
             name="Player 1"
-            rating={1450}
+            rating={1200}
             time={whiteTime}
             isActive={turn === "w" && !gameOver}
             isWhite={true}
@@ -90,6 +91,7 @@ const Index = () => {
               validMoves={validMoves}
               lastMove={lastMove}
               onSquareClick={handleSquareClick}
+              kingInCheckSquare={kingInCheckSquare}
             />
           </div>
         </div>

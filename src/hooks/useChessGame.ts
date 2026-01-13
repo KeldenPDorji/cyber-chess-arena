@@ -1,14 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { Chess, Square, Move } from "chess.js";
-
-const pieceSymbols: Record<string, { w: string; b: string }> = {
-  k: { w: "♔", b: "♚" },
-  q: { w: "♕", b: "♛" },
-  r: { w: "♖", b: "♜" },
-  b: { w: "♗", b: "♝" },
-  n: { w: "♘", b: "♞" },
-  p: { w: "♙", b: "♟" },
-};
+import { pieceSymbols, getKingSquare } from "@/lib/chessUtils";
 
 export const useChessGame = (initialTime = 600) => {
   const [game, setGame] = useState(() => new Chess());
@@ -128,11 +120,13 @@ export const useChessGame = (initialTime = 600) => {
     setWhiteCaptured([]);
     setBlackCaptured([]);
     setGameOver(false);
-  }, [initialTime]);
+  },    [initialTime]);
 
   const resign = useCallback(() => {
     setGameOver(true);
   }, []);
+
+  const kingInCheckSquare = game.isCheck() ? getKingSquare(game, game.turn()) : null;
 
   return {
     game,
@@ -153,5 +147,6 @@ export const useChessGame = (initialTime = 600) => {
     isDraw: game.isDraw(),
     turn: game.turn(),
     winner: game.isCheckmate() ? (game.turn() === "w" ? "b" : "w") as "w" | "b" : null,
+    kingInCheckSquare,
   };
 };

@@ -70,6 +70,7 @@ const Game = () => {
     resignedBy,
     leftBy,
     timeoutWinner,
+    kingInCheckSquare,
   } = useMultiplayerGame(gameCodeFromUrl, playerName);
 
   // Save player name and game code (for reconnection after refresh)
@@ -500,7 +501,7 @@ const Game = () => {
         <div className="lg:hidden space-y-3">
           <PlayerInfo
             name={gameState.black_player_name || "Waiting..."}
-            rating={1500}
+            rating={1200}
             time={gameState.black_time}
             isActive={turn === "b" && !gameOver}
             isWhite={false}
@@ -512,7 +513,7 @@ const Game = () => {
         <div className="hidden lg:block space-y-4 order-2 lg:order-1">
           <PlayerInfo
             name={gameState.black_player_name || "Waiting..."}
-            rating={1500}
+            rating={1200}
             time={gameState.black_time}
             isActive={turn === "b" && !gameOver}
             isWhite={false}
@@ -532,7 +533,7 @@ const Game = () => {
 
           <PlayerInfo
             name={gameState.white_player_name || "Waiting..."}
-            rating={1450}
+            rating={1200}
             time={gameState.white_time}
             isActive={turn === "w" && !gameOver}
             isWhite={true}
@@ -550,6 +551,7 @@ const Game = () => {
               lastMove={lastMove}
               onSquareClick={handleSquareClick}
               flipped={playerColor === "b"}
+              kingInCheckSquare={kingInCheckSquare}
             />
           </div>
         </div>
@@ -558,7 +560,7 @@ const Game = () => {
         <div className="lg:hidden space-y-3">
           <PlayerInfo
             name={gameState.white_player_name || "Waiting..."}
-            rating={1450}
+            rating={1200}
             time={gameState.white_time}
             isActive={turn === "w" && !gameOver}
             isWhite={true}

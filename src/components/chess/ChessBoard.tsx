@@ -9,6 +9,7 @@ interface ChessBoardProps {
   lastMove: { from: Square; to: Square } | null;
   onSquareClick: (square: Square) => void;
   flipped?: boolean;
+  kingInCheckSquare?: Square | null;
 }
 
 const files = ["a", "b", "c", "d", "e", "f", "g", "h"];
@@ -21,6 +22,7 @@ export const ChessBoard = ({
   lastMove,
   onSquareClick,
   flipped = false,
+  kingInCheckSquare = null,
 }: ChessBoardProps) => {
   const displayFiles = flipped ? [...files].reverse() : files;
   const displayRanks = flipped ? [...ranks].reverse() : ranks;
@@ -66,6 +68,7 @@ export const ChessBoard = ({
                 const isValidMove = validMoves.includes(square);
                 const isLastMove =
                   lastMove?.from === square || lastMove?.to === square;
+                const isKingInCheck = kingInCheckSquare === square;
 
                 return (
                   <ChessSquare
@@ -75,6 +78,7 @@ export const ChessBoard = ({
                     isSelected={isSelected}
                     isValidMove={isValidMove}
                     isLastMove={isLastMove}
+                    isKingInCheck={isKingInCheck}
                     onClick={() => onSquareClick(square)}
                     position={square}
                   />

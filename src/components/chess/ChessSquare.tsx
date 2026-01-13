@@ -7,6 +7,7 @@ interface ChessSquareProps {
   isSelected: boolean;
   isValidMove: boolean;
   isLastMove: boolean;
+  isKingInCheck: boolean;
   onClick: () => void;
   position: string;
 }
@@ -17,6 +18,7 @@ export const ChessSquare = ({
   isSelected,
   isValidMove,
   isLastMove,
+  isKingInCheck,
   onClick,
   position,
 }: ChessSquareProps) => {
@@ -31,6 +33,7 @@ export const ChessSquare = ({
         ${isLight ? "bg-muted/30" : "bg-card/80"}
         ${isSelected ? "ring-2 ring-neon-cyan border-glow-cyan" : ""}
         ${isLastMove ? "bg-neon-purple/20" : ""}
+        ${isKingInCheck ? "ring-2 ring-red-500 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.6)] bg-red-500/10" : ""}
         hover:bg-neon-cyan/10
       `}
     >

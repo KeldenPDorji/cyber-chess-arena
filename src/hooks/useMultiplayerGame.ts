@@ -1,15 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Chess, Square, Move } from "chess.js";
 import { supabase } from "@/integrations/supabase/client";
-
-const pieceSymbols: Record<string, { w: string; b: string }> = {
-  k: { w: "♔", b: "♚" },
-  q: { w: "♕", b: "♛" },
-  r: { w: "♖", b: "♜" },
-  b: { w: "♗", b: "♝" },
-  n: { w: "♘", b: "♞" },
-  p: { w: "♙", b: "♟" },
-};
+import { pieceSymbols, getKingSquare } from "@/lib/chessUtils";
 
 interface GameState {
   id: string;
@@ -715,6 +707,8 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
     }
   }, [pendingPromotion, gameState, game, playerColor]);
 
+  const kingInCheckSquare = game.isCheck() ? getKingSquare(game, game.turn()) : null;
+
   return {
     game,
     gameState,
@@ -746,5 +740,6 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
     resignedBy,
     leftBy,
     timeoutWinner,
+    kingInCheckSquare,
   };
 };

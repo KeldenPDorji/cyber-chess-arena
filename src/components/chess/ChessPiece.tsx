@@ -1,19 +1,11 @@
 import { motion } from "framer-motion";
+import { pieceSymbols } from "@/lib/chessUtils";
 
 interface ChessPieceProps {
   piece: string;
   color: "w" | "b";
   isSelected?: boolean;
 }
-
-const pieceSymbols: Record<string, { w: string; b: string }> = {
-  k: { w: "♔", b: "♚" },
-  q: { w: "♕", b: "♛" },
-  r: { w: "♖", b: "♜" },
-  b: { w: "♗", b: "♝" },
-  n: { w: "♘", b: "♞" },
-  p: { w: "♙", b: "♟" },
-};
 
 export const ChessPiece = ({ piece, color, isSelected }: ChessPieceProps) => {
   const symbol = pieceSymbols[piece.toLowerCase()]?.[color] || "";

@@ -4,6 +4,7 @@ import { PlayerInfo } from "@/components/chess/PlayerInfo";
 import { MoveHistory } from "@/components/chess/MoveHistory";
 import { GameControls } from "@/components/chess/GameControls";
 import { GameStatus } from "@/components/chess/GameStatus";
+import { VictoryAnimation } from "@/components/chess/VictoryAnimation";
 import { useChessGame } from "@/hooks/useChessGame";
 import { Cpu, Zap } from "lucide-react";
 
@@ -114,6 +115,14 @@ const Index = () => {
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}
         className="fixed bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-neon-cyan via-neon-purple to-neon-magenta opacity-50"
+      />
+
+      {/* Victory Animation */}
+      <VictoryAnimation
+        show={gameOver}
+        winner={winner}
+        playerColor="w"
+        reason={isCheckmate ? "checkmate" : isDraw ? "draw" : "checkmate"}
       />
     </div>
   );

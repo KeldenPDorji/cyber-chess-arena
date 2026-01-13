@@ -10,6 +10,7 @@ import { GameLobby } from "@/components/chess/GameLobby";
 import { TimerSettings } from "@/components/chess/TimerSettings";
 import { QuickJoin } from "@/components/chess/QuickJoin";
 import { PromotionDialog } from "@/components/chess/PromotionDialog";
+import { VictoryAnimation } from "@/components/chess/VictoryAnimation";
 import { useMultiplayerGame } from "@/hooks/useMultiplayerGame";
 import { Cpu, Zap, Crown, Users } from "lucide-react";
 import { toast } from "sonner";
@@ -611,6 +612,21 @@ const Game = () => {
         open={!!pendingPromotion}
         onSelect={handlePromotion}
         isWhite={playerColor === "w"}
+      />
+
+      {/* Victory Animation */}
+      <VictoryAnimation
+        show={gameOver}
+        winner={winner || (timeoutWinner ? timeoutWinner : (resignedBy ? (resignedBy === "w" ? "b" : "w") : null))}
+        playerColor={playerColor}
+        reason={
+          isCheckmate ? "checkmate" :
+          isDraw ? "draw" :
+          timeoutWinner ? "timeout" :
+          resignedBy ? "resignation" :
+          leftBy ? "abandoned" :
+          "checkmate"
+        }
       />
     </div>
   );

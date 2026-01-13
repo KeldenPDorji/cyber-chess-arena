@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Copy, Users, Swords, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { TimerSettings } from "./TimerSettings";
+import { devLog } from "@/lib/devLog";
 
 interface GameLobbyProps {
   onCreateGame: (preferredColor?: "w" | "b" | "random") => Promise<string | null>;
@@ -32,11 +33,11 @@ export const GameLobby = ({
       toast.error("Please enter your name first");
       return;
     }
-    console.log("Creating game with preferred color:", preferredColor);
+    devLog.log("Creating game with preferred color:", preferredColor);
     setIsCreating(true);
     try {
       const code = await onCreateGame(preferredColor);
-      console.log("Game created with code:", code);
+      devLog.log("Game created with code:", code);
       if (code) {
         setCreatedCode(code);
         toast.success(`Game created! Code: ${code}`);
@@ -44,7 +45,7 @@ export const GameLobby = ({
         toast.error("Failed to create game - no code returned");
       }
     } catch (error) {
-      console.error("Error creating game:", error);
+      devLog.error("Error creating game:", error);
       toast.error("Error creating game");
     } finally {
       setIsCreating(false);

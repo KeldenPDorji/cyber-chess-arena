@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Swords, Zap, Clock, Crown, UserCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { devLog } from "@/lib/devLog";
 
 interface GameInfo {
   white_player_name: string | null;
@@ -28,7 +29,7 @@ export const QuickJoin = ({ gameCode, onJoin, loading }: QuickJoinProps) => {
   // Fetch game details
   useEffect(() => {
     const fetchGameInfo = async () => {
-      console.log("Fetching game info for:", gameCode);
+      devLog.log("Fetching game info for:", gameCode);
       const { data, error } = await supabase
         .from("chess_games")
         .select("white_player_name, black_player_name, white_time, black_time, status")
@@ -36,9 +37,9 @@ export const QuickJoin = ({ gameCode, onJoin, loading }: QuickJoinProps) => {
         .single();
 
       if (error) {
-        console.error("Error fetching game:", error);
+        devLog.error("Error fetching game:", error);
       } else {
-        console.log("Game info fetched:", data);
+        devLog.log("Game info fetched:", data);
         setGameInfo(data);
       }
       setFetchingGame(false);

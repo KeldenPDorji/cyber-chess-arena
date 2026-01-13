@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { RotateCcw, Flag, Handshake, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
+import { devLog } from "@/lib/devLog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,7 +40,7 @@ export const GameControls = ({
   // Auto-open dialog when draw is offered
   useEffect(() => {
     if (drawOffered && onAcceptDraw) {
-      console.log("🎮 Auto-opening draw dialog");
+      devLog.log("🎮 Auto-opening draw dialog");
       setShowDrawDialog(true);
     } else {
       setShowDrawDialog(false);
@@ -47,7 +48,7 @@ export const GameControls = ({
   }, [drawOffered, onAcceptDraw]);
 
   // Debug logging
-  console.log("🎮 GameControls render:", {
+  devLog.log("🎮 GameControls render:", {
     drawOffered,
     hasAcceptHandler: !!onAcceptDraw,
     hasDeclineHandler: !!onDeclineDraw,

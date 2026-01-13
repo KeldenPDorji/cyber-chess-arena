@@ -14,6 +14,7 @@ import { useMultiplayerGame } from "@/hooks/useMultiplayerGame";
 import { Cpu, Zap, Crown, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { devLog } from "@/lib/devLog";
 
 const Game = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -32,7 +33,7 @@ const Game = () => {
   });
 
   // Debug logging
-  console.log("🔍 Game.tsx render:", {
+  devLog.log("🔍 Game.tsx render:", {
     gameCodeFromUrl,
     playerName,
     hasPlayerName: !!playerName,
@@ -95,7 +96,7 @@ const Game = () => {
     gameState?.draw_offered_by === playerColor;
 
   // Debug draw offer state
-  console.log("🎯 Draw offer debug:", {
+  devLog.log("🎯 Draw offer debug:", {
     draw_offered_by: gameState?.draw_offered_by,
     playerColor,
     drawOfferedByOpponent,
@@ -171,14 +172,14 @@ const Game = () => {
   const handleCreateGame = async (preferredColor?: "w" | "b" | "random") => {
     const code = await createGame(preferredColor);
     if (code) {
-      console.log("Game created, updating URL with code:", code);
+      devLog.log("Game created, updating URL with code:", code);
       setSearchParams({ game: code });
     }
     return code;
   };
 
   const handleOfferDraw = async () => {
-    console.log("Offering draw, current state:", { 
+    devLog.log("Offering draw, current state:", { 
       gameState: gameState?.draw_offered_by, 
       playerColor 
     });
@@ -225,7 +226,7 @@ const Game = () => {
     window.location.href = "/";
   };
 
-  console.log("Game state:", {
+  devLog.log("Game state:", {
     gameState, 
     playerColor, 
     loading, 
@@ -239,17 +240,17 @@ const Game = () => {
   // 2. This is a new invite link (different from last game)
   // 3. User is not already a player in this game (no playerColor assigned yet)
   if (gameCodeFromUrl && isNewInvite && !playerColor) {
-    console.log("✅ Showing QuickJoin for NEW invite:", gameCodeFromUrl);
+    devLog.log("✅ Showing QuickJoin for NEW invite:", gameCodeFromUrl);
     return (
       <QuickJoin
         gameCode={gameCodeFromUrl}
         onJoin={async (name) => {
-          console.log("QuickJoin: User clicked join with name:", name);
+          devLog.log("QuickJoin: User clicked join with name:", name);
           setPlayerName(name);
           setIsNewInvite(false);
           // Join the game with the provided name
           const success = await joinGame(gameCodeFromUrl, name);
-          console.log("Join result:", success);
+          devLog.log("Join result:", success);
           if (!success) {
             toast.error("Failed to join game");
           }
@@ -259,7 +260,7 @@ const Game = () => {
     );
   }
 
-  console.log("❌ NOT showing QuickJoin because:", {
+  devLog.log("❌ NOT showing QuickJoin because:", {
     hasGameCode: !!gameCodeFromUrl,
     hasPlayerName: !!playerName,
     playerName,
@@ -271,7 +272,7 @@ const Game = () => {
   // Show lobby if: no gameState exists, OR (game is waiting AND user hasn't joined as a player)
   // BUT if game is waiting and user IS a player (creator), show waiting screen, not lobby
   if (!gameState) {
-    console.log("Showing lobby - no game state");
+    devLog.log("Showing lobby - no game state");
     return (
       <GameLobby
         onCreateGame={handleCreateGame}
@@ -286,7 +287,7 @@ const Game = () => {
   // If game is waiting and I'm a player (creator), show waiting screen
   if (gameState.status === "waiting" && playerColor) {
     const shareableUrl = window.location.href;
-    console.log("Showing waiting screen - you created game, waiting for opponent", {
+    devLog.log("Showing waiting screen - you created game, waiting for opponent", {
       status: gameState.status,
       white: gameState.white_player_name,
       black: gameState.black_player_name,
@@ -323,7 +324,7 @@ const Game = () => {
               onClick={async (e) => {
                 e.preventDefault();
                 const linkToCopy = shareableUrl;
-                console.log("📋 Copy Link clicked:", {
+                devLog.log("📋 Copy Link clicked:", {
                   url: linkToCopy,
                   hasClipboard: !!navigator.clipboard,
                   isSecure: window.isSecureContext
@@ -333,11 +334,11 @@ const Game = () => {
                   // Try modern clipboard API first
                   if (navigator.clipboard && window.isSecureContext) {
                     await navigator.clipboard.writeText(linkToCopy);
-                    console.log("✅ Link copied successfully via clipboard API");
+                    devLog.log("✅ Link copied successfully via clipboard API");
                     toast.success("Link copied to clipboard!");
                   } else {
                     // Fallback for older browsers or non-secure contexts
-                    console.log("⚠️ Using fallback copy method");
+                    devLog.log("⚠️ Using fallback copy method");
                     const textArea = document.createElement("textarea");
                     textArea.value = linkToCopy;
                     textArea.style.position = "fixed";
@@ -351,7 +352,7 @@ const Game = () => {
                       const successful = document.execCommand('copy');
                       textArea.remove();
                       if (successful) {
-                        console.log("✅ Link copied successfully via execCommand");
+                        devLog.log("✅ Link copied successfully via execCommand");
                         toast.success("Link copied to clipboard!");
                       } else {
                         throw new Error("Copy command failed");
@@ -362,7 +363,7 @@ const Game = () => {
                     }
                   }
                 } catch (err) {
-                  console.error("❌ Failed to copy:", err);
+                  devLog.error("❌ Failed to copy:", err);
                   toast.error("Failed to copy link. Please copy manually.");
                 }
               }}
@@ -394,7 +395,7 @@ const Game = () => {
   
   // If game is waiting and I'm NOT a player, show lobby to join
   if (gameState.status === "waiting" && !playerColor) {
-    console.log("Showing lobby - game waiting, not a player");
+    devLog.log("Showing lobby - game waiting, not a player");
     return (
       <GameLobby
         onCreateGame={handleCreateGame}
@@ -406,7 +407,7 @@ const Game = () => {
     );
   }
 
-  console.log("Showing game board");
+  devLog.log("Showing game board");
 
   // Show loading state
   if (loading) {
@@ -437,7 +438,7 @@ const Game = () => {
 
   // Safety check
   if (!game || !gameState) {
-    console.error("Missing game or gameState:", { game, gameState });
+    devLog.error("Missing game or gameState:", { game, gameState });
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -447,7 +448,7 @@ const Game = () => {
     );
   }
 
-  console.log("Draw offer status:", {
+  devLog.log("Draw offer status:", {
     draw_offered_by: gameState.draw_offered_by,
     playerColor,
     drawOfferedByOpponent

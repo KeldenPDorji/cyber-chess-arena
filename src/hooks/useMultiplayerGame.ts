@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { Chess, Square, Move } from "chess.js";
 import { supabase } from "@/integrations/supabase/client";
 import { pieceSymbols, getKingSquare } from "@/lib/chessUtils";
+import { devLog } from "@/lib/devLog";
 
 interface GameState {
   id: string;
@@ -35,14 +36,14 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
   // Initial load: fetch game if gameCode provided (for QuickJoin and spectators)
   useEffect(() => {
     if (!gameCode) {
-      console.log("No gameCode provided, setting loading to false");
+      devLog.log("No gameCode provided, setting loading to false");
       setLoading(false);
       return;
     }
 
     // If we have a gameCode but no playerName, just fetch the game data for display
     const fetchInitialGame = async () => {
-      console.log("🔍 Initial fetch for gameCode:", gameCode);
+      devLog.log("🔍 Initial fetch for gameCode:", gameCode);
       const { data, error } = await supabase
         .from("chess_games")
         .select("*")
@@ -50,22 +51,22 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
         .single();
 
       if (error || !data) {
-        console.error("❌ Failed to fetch initial game:", error);
+        devLog.error("❌ Failed to fetch initial game:", error);
         setError("Game not found");
         setLoading(false);
         return;
       }
 
-      console.log("✅ Initial game data loaded:", data);
+      devLog.log("✅ Initial game data loaded:", data);
       
       // Check if this player is already in the game
       if (playerName) {
         if (data.white_player_name === playerName) {
           setPlayerColor("w");
-          console.log("✅ You are already white player");
+          devLog.log("✅ You are already white player");
         } else if (data.black_player_name === playerName) {
           setPlayerColor("b");
-          console.log("✅ You are already black player");
+          devLog.log("✅ You are already black player");
         }
       }
 
@@ -75,7 +76,7 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
         try {
           chess.loadPgn(data.pgn);
         } catch (e) {
-          console.error("Failed to load PGN:", e);
+          devLog.error("Failed to load PGN:", e);
           chess.load(data.fen);
         }
       } else {
@@ -108,7 +109,7 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
       actualColor = preferredColor;
     }
     
-    console.log("Creating game with code:", code, "player:", playerName, "color:", actualColor);
+    devLog.log("Creating game with code:", code, "player:", playerName, "color:", actualColor);
     
     const gameData: any = {
       game_code: code,
@@ -131,12 +132,12 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
       .single();
 
     if (error) {
-      console.error("Supabase error creating game:", error);
+      devLog.error("Supabase error creating game:", error);
       setError("Failed to create game: " + error.message);
       return null;
     }
 
-    console.log("Game created successfully:", data);
+    devLog.log("Game created successfully:", data);
     setGameState(data as unknown as GameState);
     setPlayerColor(actualColor);
     setLoading(false);
@@ -146,7 +147,7 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
   // Join an existing game
   const joinGame = useCallback(async (code: string, nameOverride?: string) => {
     const nameToUse = nameOverride || playerName;
-    console.log("🎮 joinGame called with code:", code, "playerName:", nameToUse);
+    devLog.log("🎮 joinGame called with code:", code, "playerName:", nameToUse);
     const { data, error } = await supabase
       .from("chess_games")
       .select("*")
@@ -154,13 +155,13 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
       .single();
 
     if (error || !data) {
-      console.error("❌ Game not found:", error);
+      devLog.error("❌ Game not found:", error);
       setError("Game not found");
       setLoading(false);
       return false;
     }
     
-    console.log("📥 Fetched game data:", data);
+    devLog.log("📥 Fetched game data:", data);
 
     // Determine player color
     let updatedData = data;
@@ -168,10 +169,10 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
     // Check if player is already in the game
     if (data.white_player_name === nameToUse) {
       setPlayerColor("w");
-      console.log("✅ Already white player");
+      devLog.log("✅ Already white player");
     } else if (data.black_player_name === nameToUse) {
       setPlayerColor("b");
-      console.log("✅ Already black player");
+      devLog.log("✅ Already black player");
     }
     // Try to join as white if slot is available
     else if (!data.white_player_name) {
@@ -186,14 +187,14 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
         .single();
 
       if (updateError || !updated) {
-        console.error("Failed to join as white:", updateError);
+        devLog.error("Failed to join as white:", updateError);
         setError("Failed to join game");
         return false;
       }
 
       updatedData = updated;
       setPlayerColor("w");
-      console.log("✅ Joined as white player, updated data:", updatedData);
+      devLog.log("✅ Joined as white player, updated data:", updatedData);
     }
     // Try to join as black if slot is available
     else if (!data.black_player_name) {
@@ -208,19 +209,19 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
         .single();
 
       if (updateError || !updated) {
-        console.error("Failed to join as black:", updateError);
+        devLog.error("Failed to join as black:", updateError);
         setError("Failed to join game");
         return false;
       }
 
       updatedData = updated;
       setPlayerColor("b");
-      console.log("✅ Joined as black player, updated data:", updatedData);
+      devLog.log("✅ Joined as black player, updated data:", updatedData);
     }
     // Both slots taken - spectator mode
     else {
       setPlayerColor(null);
-      console.log("👀 Joining as spectator - both slots taken");
+      devLog.log("👀 Joining as spectator - both slots taken");
     }
 
     // Load game from PGN to preserve move history
@@ -228,9 +229,9 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
     if (updatedData.pgn) {
       try {
         chess.loadPgn(updatedData.pgn);
-        console.log("Joined game with move history:", chess.history());
+        devLog.log("Joined game with move history:", chess.history());
       } catch (e) {
-        console.error("Failed to load PGN on join:", e);
+        devLog.error("Failed to load PGN on join:", e);
         chess.load(updatedData.fen);
       }
     } else {
@@ -246,15 +247,15 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
   // Subscribe to game updates
   useEffect(() => {
     if (!gameState?.id) {
-      console.log("⚠️ No gameState.id, skipping subscription");
+      devLog.log("⚠️ No gameState.id, skipping subscription");
       return;
     }
 
-    console.log("📡 Setting up real-time subscription for game ID:", gameState.id);
+    devLog.log("📡 Setting up real-time subscription for game ID:", gameState.id);
     
     // Create a unique channel name for this game
     const channelName = `game-${gameState.id}-${Date.now()}`;
-    console.log("📡 Channel name:", channelName);
+    devLog.log("📡 Channel name:", channelName);
 
     const channel = supabase
       .channel(channelName, {
@@ -272,8 +273,8 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
           filter: `id=eq.${gameState.id}`,
         },
         (payload) => {
-          console.log("📥 Real-time update received at", new Date().toISOString());
-          console.log("📥 Update payload:", payload.new);
+          devLog.log("📥 Real-time update received at", new Date().toISOString());
+          devLog.log("📥 Update payload:", payload.new);
           
           const newState = payload.new as GameState;
           
@@ -282,15 +283,15 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
           if (newState.pgn) {
             try {
               chess.loadPgn(newState.pgn);
-              console.log("♟️ Loaded PGN successfully, move count:", chess.history().length);
-              console.log("♟️ Move history:", chess.history());
+              devLog.log("♟️ Loaded PGN successfully, move count:", chess.history().length);
+              devLog.log("♟️ Move history:", chess.history());
             } catch (e) {
-              console.error("❌ Failed to load PGN, loading FEN instead:", e);
+              devLog.error("❌ Failed to load PGN, loading FEN instead:", e);
               chess.load(newState.fen);
             }
           } else {
             chess.load(newState.fen);
-            console.log("♟️ Loaded from FEN");
+            devLog.log("♟️ Loaded from FEN");
           }
           
           // Extract last move from history
@@ -298,33 +299,33 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
           if (history.length > 0) {
             const lastMoveData = history[history.length - 1];
             setLastMove({ from: lastMoveData.from, to: lastMoveData.to });
-            console.log("♟️ Last move:", lastMoveData.san, "from", lastMoveData.from, "to", lastMoveData.to);
+            devLog.log("♟️ Last move:", lastMoveData.san, "from", lastMoveData.from, "to", lastMoveData.to);
           }
           
           // Update state
           setGame(chess);
           setGameState(newState);
-          console.log("✅ Game state updated via real-time subscription");
+          devLog.log("✅ Game state updated via real-time subscription");
         }
       )
       .subscribe((status) => {
-        console.log("📡 Subscription status changed:", status);
+        devLog.log("📡 Subscription status changed:", status);
         if (status === "SUBSCRIBED") {
-          console.log("✅ Successfully subscribed to game updates for game ID:", gameState.id);
-          console.log("✅ Listening for changes on chess_games table");
+          devLog.log("✅ Successfully subscribed to game updates for game ID:", gameState.id);
+          devLog.log("✅ Listening for changes on chess_games table");
         } else if (status === "CHANNEL_ERROR") {
-          console.error("❌ Channel error - real-time updates may not work");
-          console.error("❌ Please check Supabase Realtime settings");
+          devLog.error("❌ Channel error - real-time updates may not work");
+          devLog.error("❌ Please check Supabase Realtime settings");
         } else if (status === "TIMED_OUT") {
-          console.error("❌ Subscription timed out");
-          console.error("❌ Please check your network connection and Supabase status");
+          devLog.error("❌ Subscription timed out");
+          devLog.error("❌ Please check your network connection and Supabase status");
         } else if (status === "CLOSED") {
-          console.log("🔴 Subscription closed");
+          devLog.log("🔴 Subscription closed");
         }
       });
 
     return () => {
-      console.log("🔌 Cleaning up subscription for game ID:", gameState.id);
+      devLog.log("🔌 Cleaning up subscription for game ID:", gameState.id);
       channel.unsubscribe();
       supabase.removeChannel(channel);
     };
@@ -343,7 +344,7 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
     // Only start timer after first move
     const moveCount = game.history().length;
     if (moveCount === 0) {
-      console.log("Timer not started - waiting for first move");
+      devLog.log("Timer not started - waiting for first move");
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
@@ -356,13 +357,13 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
       clearInterval(timerRef.current);
     }
 
-    console.log("Starting timer for", gameState.turn === "w" ? "white" : "black", "after", moveCount, "moves");
+    devLog.log("Starting timer for", gameState.turn === "w" ? "white" : "black", "after", moveCount, "moves");
 
     timerRef.current = setInterval(async () => {
       // Only the player whose turn it is updates their timer
       if (gameState.turn === "w" && playerColor === "w") {
         const newTime = Math.max(0, gameState.white_time - 1);
-        console.log("White timer:", newTime);
+        devLog.log("White timer:", newTime);
         if (newTime === 0) {
           await supabase
             .from("chess_games")
@@ -376,7 +377,7 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
         }
       } else if (gameState.turn === "b" && playerColor === "b") {
         const newTime = Math.max(0, gameState.black_time - 1);
-        console.log("Black timer:", newTime);
+        devLog.log("Black timer:", newTime);
         if (newTime === 0) {
           await supabase
             .from("chess_games")
@@ -403,7 +404,7 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
     async (square: Square) => {
       if (!gameState || gameState.status === "finished") return;
       if (playerColor !== game.turn()) {
-        console.log("❌ Not your turn:", { playerColor, turn: game.turn() });
+        devLog.log("❌ Not your turn:", { playerColor, turn: game.turn() });
         return;
       }
 
@@ -431,7 +432,7 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
           });
 
           if (move) {
-            console.log("♟️ Move made:", move);
+            devLog.log("♟️ Move made:", move);
             const newFen = game.fen();
             const newPgn = game.pgn();
             const isGameOver = game.isGameOver();
@@ -458,23 +459,23 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
               }
             }
 
-            console.log("📤 Updating database with:", timeUpdate);
+            devLog.log("📤 Updating database with:", timeUpdate);
             const { error } = await supabase
               .from("chess_games")
               .update(timeUpdate)
               .eq("id", gameState.id);
 
             if (error) {
-              console.error("❌ Failed to update game:", error);
-              console.error("❌ Error details:", {
+              devLog.error("❌ Failed to update game:", error);
+              devLog.error("❌ Error details:", {
                 code: error.code,
                 message: error.message,
                 details: error.details,
                 hint: error.hint
               });
             } else {
-              console.log("✅ Database updated successfully");
-              console.log("✅ Move synced: from", move.from, "to", move.to);
+              devLog.log("✅ Database updated successfully");
+              devLog.log("✅ Move synced: from", move.from, "to", move.to);
             }
 
             setLastMove({ from: move.from as Square, to: move.to as Square });
@@ -483,7 +484,7 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
             return;
           }
         } catch (e) {
-          console.log("❌ Invalid move attempt:", e);
+          devLog.log("❌ Invalid move attempt:", e);
         }
 
         if (piece && piece.color === game.turn()) {
@@ -510,7 +511,7 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
   const resign = useCallback(async () => {
     if (!gameState || !playerColor) return;
     
-    console.log(playerColor, "is resigning");
+    devLog.log(playerColor, "is resigning");
     // Store resignation info in PGN comment for now
     const resignNote = `{${playerColor === "w" ? "White" : "Black"} resigned}`;
     const updatedPgn = gameState.pgn ? `${gameState.pgn} ${resignNote}` : resignNote;
@@ -526,11 +527,11 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
 
   const offerDraw = useCallback(async () => {
     if (!gameState || !playerColor) {
-      console.error("Cannot offer draw: missing gameState or playerColor", { gameState, playerColor });
+      devLog.error("Cannot offer draw: missing gameState or playerColor", { gameState, playerColor });
       return { error: "Cannot offer draw: missing game state or player information" };
     }
     
-    console.log("🤝 Offering draw...", { 
+    devLog.log("🤝 Offering draw...", { 
       playerColor, 
       gameId: gameState.id,
       currentDrawOffer: gameState.draw_offered_by 
@@ -543,8 +544,8 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
       .select();
     
     if (error) {
-      console.error("❌ Error offering draw:", error);
-      console.error("Error details:", {
+      devLog.error("❌ Error offering draw:", error);
+      devLog.error("Error details:", {
         message: error.message,
         code: error.code,
         hint: error.hint
@@ -552,9 +553,9 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
       
       // Check if it's a missing column error
       if (error.message.includes("draw_offered_by") || error.message.includes("column")) {
-        console.error("🚨 DATABASE MIGRATION NEEDED!");
-        console.error("The 'draw_offered_by' column doesn't exist in your database.");
-        console.error("👉 See DEBUG_DRAW_OFFER.md for instructions");
+        devLog.error("🚨 DATABASE MIGRATION NEEDED!");
+        devLog.error("The 'draw_offered_by' column doesn't exist in your database.");
+        devLog.error("👉 See DEBUG_DRAW_OFFER.md for instructions");
         return { 
           error: "Database migration required. Please apply the migration to enable draw offers. See DEBUG_DRAW_OFFER.md",
           migrationNeeded: true 
@@ -562,7 +563,7 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
       }
       return { error: error.message };
     } else {
-      console.log("✅ Draw offer successful!", data);
+      devLog.log("✅ Draw offer successful!", data);
       return { success: true };
     }
   }, [gameState, playerColor]);
@@ -579,7 +580,7 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
   const declineDraw = useCallback(async () => {
     if (!gameState) return;
     
-    console.log("Declining draw offer");
+    devLog.log("Declining draw offer");
     await supabase
       .from("chess_games")
       .update({ draw_offered_by: null } as any)
@@ -589,7 +590,7 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
   const leaveGame = useCallback(async () => {
     if (!gameState || !playerColor) return;
     
-    console.log(playerColor, "is leaving the game");
+    devLog.log(playerColor, "is leaving the game");
     // Store leave info in PGN comment
     const leaveNote = `{${playerColor === "w" ? "White" : "Black"} left the game}`;
     const updatedPgn = gameState.pgn ? `${gameState.pgn} ${leaveNote}` : leaveNote;
@@ -662,7 +663,7 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
       });
 
       if (move) {
-        console.log("♟️ Promotion move made:", move);
+        devLog.log("♟️ Promotion move made:", move);
         const newFen = game.fen();
         const newPgn = game.pgn();
         const isGameOver = game.isGameOver();
@@ -686,23 +687,23 @@ export const useMultiplayerGame = (gameCode: string | null, playerName: string) 
           }
         }
 
-        console.log("📤 Updating database with promotion move:", timeUpdate);
+        devLog.log("📤 Updating database with promotion move:", timeUpdate);
         const { error } = await supabase
           .from("chess_games")
           .update(timeUpdate)
           .eq("id", gameState.id);
 
         if (error) {
-          console.error("❌ Failed to update game:", error);
+          devLog.error("❌ Failed to update game:", error);
         } else {
-          console.log("✅ Promotion move synced");
+          devLog.log("✅ Promotion move synced");
         }
 
         setLastMove({ from: move.from as Square, to: move.to as Square });
         setPendingPromotion(null);
       }
     } catch (err) {
-      console.error("Failed to make promotion move:", err);
+      devLog.error("Failed to make promotion move:", err);
       setPendingPromotion(null);
     }
   }, [pendingPromotion, gameState, game, playerColor]);
